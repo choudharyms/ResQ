@@ -40,20 +40,25 @@ async function main() {
   console.log('\nPublic Schema Relations:');
   console.table(relations);
 
-  const policies = await query(`
-    SELECT 
-      tablename,
-      policyname,
-      roles,
-      cmd,
-      qual,
-      with_check
-    FROM pg_policies
-    WHERE schemaname = 'public'
-    ORDER BY tablename, policyname;
+  const postgisExt = await query(`
+    SELECT extname, extowner::regrole, n.nspname as schema 
+    FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace
+    WHERE extname = 'postgis';
   `);
-  console.log('\nActive RLS Policies:');
-  console.table(policies);
+  console.log('\nPostGIS Extension Status:');
+  console.table(postgisExt);
+
+  const geoTest = await query(`
+    SELECT 
+      a.call_sign,
+      i.primary_need,
+      ROUND(ST_Distance(a.location::geography, i.location::geography)::numeric, 2) as distance_meters
+    FROM assets a, incidents i
+    LIMIT 1;
+  `);
+  console.log('\nLive Geospatial Distance Calculation:');
+  console.table(geoTest);
 }
 
 main();
