@@ -79,7 +79,7 @@ export const AllocationPlanPanel: React.FC = () => {
               </span>
             </div>
             <p className="text-[10px] text-content-muted font-mono flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block animate-ping shrink-0" />
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block shrink-0" />
               <span>Greedy Solver · ~32ms Math</span>
             </p>
           </div>

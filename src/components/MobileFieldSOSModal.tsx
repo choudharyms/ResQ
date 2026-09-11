@@ -213,7 +213,7 @@ export const MobileFieldSOSModal: React.FC = () => {
                 onClick={handleSimulateVoice}
                 className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold flex items-center gap-1 transition-all ${
                   isRecording
-                    ? 'bg-status-critical text-white animate-pulse'
+                    ? 'bg-status-critical text-white'
                     : 'bg-indigo-600 hover:bg-indigo-500 text-white'
                 }`}
               >
@@ -231,7 +231,7 @@ export const MobileFieldSOSModal: React.FC = () => {
                   height={40}
                   className="w-full h-10 rounded bg-slate-950/80"
                 />
-                <span className="text-[10px] text-sky-400 font-mono flex items-center gap-1 animate-pulse">
+                <span className="text-[10px] text-sky-400 font-mono flex items-center gap-1">
                   <Volume2 className="h-3 w-3" /> Live Audio Frequency Spectrum Detected (16 kHz PCM)
                 </span>
               </div>

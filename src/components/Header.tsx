@@ -64,7 +64,7 @@ export const Header: React.FC = () => {
 
         {/* Location / Operational Sector */}
         <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-card/60 border border-border-subtle text-xs font-mono">
-          <span className="h-1.5 w-1.5 rounded-full bg-status-safe animate-ping shrink-0" />
+          <span className="h-1.5 w-1.5 rounded-full bg-status-safe shrink-0" />
           <span className="text-content-primary font-medium">Uttarakhand</span>
           <span className="text-content-muted">·</span>
           <span className="text-content-muted text-[11px]">Alaknanda Valley</span>
@@ -92,7 +92,7 @@ export const Header: React.FC = () => {
       <div className="hidden sm:flex items-center h-8 px-3 rounded-md bg-surface-card/80 border border-border-subtle text-xs font-mono divide-x divide-border-subtle shadow-inner">
         {/* Active & Critical Incidents */}
         <div className="flex items-center gap-1.5 pr-3">
-          <span className="h-2 w-2 rounded-full bg-status-critical animate-pulse shrink-0" />
+          <span className="h-2 w-2 rounded-full bg-status-critical shrink-0" />
           <span className="text-content-primary font-bold">{activeCount}</span>
           <span className="text-content-muted text-[11px]">Active</span>
           {criticalCount > 0 && (
@@ -129,7 +129,7 @@ export const Header: React.FC = () => {
           }`}
           title="Interactive 4-Act Decision Support Tour"
         >
-          <Sparkles className={`h-3 w-3 ${tourStep ? 'text-sky-400 animate-spin' : 'text-sky-400/80'}`} />
+          <Sparkles className="h-3 w-3 text-sky-400" />
           <span className="hidden xl:inline">{tourStep ? `Tour: Act ${tourStep}` : 'Demo Tour'}</span>
         </button>
 
@@ -155,7 +155,7 @@ export const Header: React.FC = () => {
         >
           <Scale className="h-3 w-3 text-status-forgotten" />
           <span className="hidden md:inline">Equity</span>
-          <span className="h-1.5 w-1.5 rounded-full bg-status-forgotten animate-ping absolute top-1 right-1" />
+          <span className="h-1.5 w-1.5 rounded-full bg-status-forgotten absolute top-1 right-1" />
         </button>
 
         {/* Primary Action: + SOS Report Form */}
@@ -197,16 +197,11 @@ export const Header: React.FC = () => {
                 : 'Local Mathematical Simulation Engine Active'
             }
           >
-            <span className="relative flex h-2 w-2">
-              {isApiConnected && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              )}
-              <span
-                className={`relative inline-flex rounded-full h-2 w-2 ${
-                  isApiConnected ? 'bg-emerald-500' : 'bg-amber-500'
-                }`}
-              />
-            </span>
+            <span
+              className={`inline-flex rounded-full h-2 w-2 shrink-0 ${
+                isApiConnected ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}
+            />
             <span className="hidden xl:inline text-[11px] font-medium">
               {isSyncing ? 'Syncing' : isApiConnected ? 'API Live' : 'Sim'}
             </span>
@@ -230,7 +225,7 @@ export const Header: React.FC = () => {
           >
             {isDegradedMode ? (
               <>
-                <WifiOff className="h-3 w-3 text-amber-400 animate-pulse" />
+                <WifiOff className="h-3 w-3 text-amber-400" />
                 <span className="font-bold text-[11px]">{offlineQueueCount > 0 ? `${offlineQueueCount}` : 'Offline'}</span>
               </>
             ) : (

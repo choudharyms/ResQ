@@ -5,11 +5,15 @@ import {
   AllocationPlan,
   PlanDiff,
   EquityZone,
+  ShelterFacility,
+  FragmentarySOSReport,
 } from '../types/disaster';
 import {
   INITIAL_INCIDENTS,
   INITIAL_ASSETS,
   INITIAL_EQUITY_ZONES,
+  INITIAL_SHELTERS,
+  INITIAL_FRAGMENTARY_FEED,
 } from '../data/uttarakhandData';
 import { runDeterministicAllocation } from '../engines/allocatorEngine';
 import { evaluateEquityMetrics } from '../engines/equityEngine';
@@ -36,6 +40,10 @@ interface DisasterState {
   selectedIncidentId: string | null;
   assets: Asset[];
   equityZones: EquityZone[];
+  shelters: ShelterFacility[];
+  fragmentaryFeed: FragmentarySOSReport[];
+  activeInventoryTab: 'FLEET' | 'SHELTERS_SUPPLIES';
+  activeIncidentView: 'CANONICAL' | 'FRAGMENTARY_FEED';
   activePlan: AllocationPlan | null;
   activePlanDiff: PlanDiff | null;
   isHighwayCut: boolean;
@@ -72,6 +80,10 @@ interface DisasterState {
   setEquityDrawerOpen: (open: boolean) => void;
   setFieldFormOpen: (open: boolean) => void;
   setFleetDrawerOpen: (open: boolean) => void;
+  setActiveInventoryTab: (tab: 'FLEET' | 'SHELTERS_SUPPLIES') => void;
+  setActiveIncidentView: (view: 'CANONICAL' | 'FRAGMENTARY_FEED') => void;
+  updateShelterOccupancy: (shelterId: string, deltaBeds: number) => void;
+  dispatchSuppliesToZone: (shelterId: string, zoneId: string, food: number, water: number, kits: number) => void;
   toggleDegradedMode: () => Promise<void>;
   toggleMute: () => void;
   setTourStep: (step: number | null) => void;
@@ -82,6 +94,10 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
   selectedIncidentId: INITIAL_INCIDENTS[0].id,
   assets: INITIAL_ASSETS,
   equityZones: INITIAL_EQUITY_ZONES,
+  shelters: INITIAL_SHELTERS,
+  fragmentaryFeed: INITIAL_FRAGMENTARY_FEED,
+  activeInventoryTab: 'FLEET',
+  activeIncidentView: 'CANONICAL',
   activePlan: null,
   activePlanDiff: null,
   isHighwayCut: false,
@@ -471,6 +487,57 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
     } else {
       set({ isDegradedMode: true });
     }
+  },
+
+  setActiveInventoryTab: (tab) => set({ activeInventoryTab: tab }),
+  setActiveIncidentView: (view) => set({ activeIncidentView: view }),
+
+  updateShelterOccupancy: (shelterId, deltaBeds) => {
+    set((state) => ({
+      shelters: state.shelters.map((s) => {
+        if (s.id !== shelterId) return s;
+        const newOccupied = Math.max(0, Math.min(s.totalCapacityBeds, s.occupiedBeds + deltaBeds));
+        const newAvailable = s.totalCapacityBeds - newOccupied;
+        const occupancyPct = newOccupied / s.totalCapacityBeds;
+        const newStatus = occupancyPct >= 0.95 ? 'FULL' : occupancyPct >= 0.75 ? 'NEAR_CAPACITY' : 'OPERATIONAL';
+        return {
+          ...s,
+          occupiedBeds: newOccupied,
+          availableBeds: newAvailable,
+          status: newStatus,
+        };
+      }),
+    }));
+  },
+
+  dispatchSuppliesToZone: (shelterId, zoneId, food, water, kits) => {
+    if (!get().isMuted) {
+      playDispatchChime();
+    }
+    set((state) => ({
+      shelters: state.shelters.map((s) => {
+        if (s.id !== shelterId) return s;
+        return {
+          ...s,
+          foodPacketsStock: Math.max(0, s.foodPacketsStock - food),
+          waterLitresStock: Math.max(0, s.waterLitresStock - water),
+          medicalKitsStock: Math.max(0, s.medicalKitsStock - kits),
+        };
+      }),
+      // Reduce unmet demand in matching incidents for this zone
+      incidents: state.incidents.map((inc) => {
+        if (inc.zoneId !== zoneId) return inc;
+        return {
+          ...inc,
+          demandVector: {
+            ...inc.demandVector,
+            foodPackets: Math.max(0, inc.demandVector.foodPackets - food),
+            waterLitres: Math.max(0, inc.demandVector.waterLitres - water),
+            medicalResponders: Math.max(0, inc.demandVector.medicalResponders - kits),
+          },
+        };
+      }),
+    }));
   },
 
   toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),

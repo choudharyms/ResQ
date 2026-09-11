@@ -112,7 +112,7 @@ export const JudgeDemoTour: React.FC = () => {
       <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-border-subtle">
         <div className="flex items-center gap-2">
           <span className="p-1 rounded bg-indigo-500/20 text-indigo-400">
-            <Sparkles className="h-4 w-4 animate-spin" />
+            <Sparkles className="h-4 w-4" />
           </span>
           <span className="text-xs font-bold uppercase tracking-wider font-mono text-indigo-400">
             Judge Guided Walkthrough Mode

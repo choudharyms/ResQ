@@ -11,14 +11,15 @@ import {
   Clock,
   Shield,
   AlertTriangle,
+  Building2,
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
 
-// Basemap Tile Providers
+// Basemap Tile Providers (100% free, no API key required, zero watermarks)
 const BASEMAP_TILES = {
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri &copy; OpenStreetMap',
     label: 'Dark Tactical',
   },
   satellite: {
@@ -27,9 +28,9 @@ const BASEMAP_TILES = {
     label: 'Satellite Recon',
   },
   street: {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenStreetMap contributors',
-    label: 'Topo OSM',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri &copy; OpenStreetMap',
+    label: 'Topo Physical',
   },
 };
 
@@ -73,6 +74,7 @@ export const TacticalMap: React.FC = () => {
   const layersRef = useRef<{
     incidentsLayer: L.LayerGroup;
     assetsLayer: L.LayerGroup;
+    sheltersLayer: L.LayerGroup;
     hexagonsLayer: L.LayerGroup;
     routesLayer: L.LayerGroup;
     blockageLayer: L.LayerGroup;
@@ -81,6 +83,7 @@ export const TacticalMap: React.FC = () => {
   const {
     incidents,
     assets,
+    shelters,
     selectedIncidentId,
     selectIncident,
     activePlan,
@@ -90,6 +93,7 @@ export const TacticalMap: React.FC = () => {
   const [basemap, setBasemap] = useState<BasemapType>('dark');
   const [showIncidents, setShowIncidents] = useState(true);
   const [showAssets, setShowAssets] = useState(true);
+  const [showShelters, setShowShelters] = useState(true);
   const [showHexagons, setShowHexagons] = useState(true);
   const [showRoutes, setShowRoutes] = useState(true);
   const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
@@ -120,11 +124,13 @@ export const TacticalMap: React.FC = () => {
     const routesLayer = L.layerGroup().addTo(map);
     const incidentsLayer = L.layerGroup().addTo(map);
     const assetsLayer = L.layerGroup().addTo(map);
+    const sheltersLayer = L.layerGroup().addTo(map);
     const blockageLayer = L.layerGroup().addTo(map);
 
     layersRef.current = {
       incidentsLayer,
       assetsLayer,
+      sheltersLayer,
       hexagonsLayer,
       routesLayer,
       blockageLayer,
@@ -213,10 +219,31 @@ export const TacticalMap: React.FC = () => {
 
         polygon.bindTooltip(
           `
-          <div class="font-mono text-xs p-0.5">
-            <span class="font-bold text-white">${incident.zoneName}</span>
-            <br/><span class="text-sky-400">H3: ${incident.h3Index.substring(0, 9)}</span>
-            <br/><span class="text-amber-400">Need Score: ${incident.assessment.priorityScore}</span>
+          <div class="font-mono text-xs p-1 min-w-[200px]">
+            <div class="font-bold text-white flex items-center justify-between border-b border-gray-700 pb-1">
+              <span>${incident.zoneName}</span>
+              <span class="text-amber-400 font-extrabold">${incident.assessment.priorityScore} pts</span>
+            </div>
+            <div class="text-[10px] text-sky-400 mt-1">H3 Hex: ${incident.h3Index.substring(0, 9)}</div>
+            <div class="mt-1.5 pt-1 border-t border-gray-800 text-[10px] space-y-0.5">
+              <div class="text-indigo-300 font-bold uppercase tracking-wider text-[9px]">Sector Supply Demand:</div>
+              <div class="text-amber-300 flex justify-between">
+                <span>Food Packets:</span>
+                <span class="font-bold">${incident.demandVector.foodPackets} pkts</span>
+              </div>
+              <div class="text-cyan-300 flex justify-between">
+                <span>Potable Water:</span>
+                <span class="font-bold">${incident.demandVector.waterLitres} L</span>
+              </div>
+              <div class="text-rose-300 flex justify-between">
+                <span>Trauma Medics/Kits:</span>
+                <span class="font-bold">${incident.demandVector.medicalResponders} units</span>
+              </div>
+              <div class="text-purple-300 flex justify-between">
+                <span>Evacuation Beds:</span>
+                <span class="font-bold">${incident.casualties.trapped + incident.casualties.injured} beds</span>
+              </div>
+            </div>
           </div>
           `,
           { permanent: false, direction: 'top', className: 'h3-tactical-tooltip' }
@@ -264,12 +291,11 @@ export const TacticalMap: React.FC = () => {
           lineCap: 'round',
         });
 
-        // 2. Inner Active Core Trajectory (Animated Flow)
+        // 2. Inner Active Core Trajectory (Static High-Contrast Route)
         const corePolyline = L.polyline(curvedPoints, {
           color: isRouteSelected ? '#FFFFFF' : routeColor,
           weight: isRouteSelected ? 2.5 : 1.8,
-          dashArray: '8, 8',
-          className: 'leaflet-tactical-flow',
+          dashArray: '6, 6',
           opacity: isRouteSelected ? 0.95 : 0.75,
         });
 
@@ -429,10 +455,10 @@ export const TacticalMap: React.FC = () => {
 
       const assetHtml = `
         <div class="relative flex items-center justify-center cursor-pointer select-none group">
-          <!-- Origin Deployment Radar Pulse -->
+          <!-- Origin Deployment Ring -->
           ${
             isDispatched
-              ? `<span style="background-color: ${agencyColor}" class="absolute -inset-1.5 rounded-md opacity-60 tactical-node-beacon pointer-events-none"></span>`
+              ? `<span style="border-color: ${agencyColor}" class="absolute -inset-1 rounded-md border-2 border-dashed pointer-events-none opacity-80"></span>`
               : ''
           }
           <!-- Asset Emblemed Squircle Node -->
@@ -484,8 +510,7 @@ export const TacticalMap: React.FC = () => {
     const bridgeCoords: [number, number] = [30.5278, 79.522];
     const cutHtml = `
       <div class="relative flex items-center justify-center cursor-pointer select-none">
-        <span class="absolute h-8 w-8 rounded-full bg-status-critical/50 animate-ping pointer-events-none"></span>
-        <div class="h-7 w-7 rounded-full bg-status-critical flex items-center justify-center text-white border-2 border-white shadow-xl animate-pulse" title="NH-07 Helang Mountain Bridge Washed Out">
+        <div class="h-7 w-7 rounded-full bg-status-critical flex items-center justify-center text-white border-2 border-white shadow-xl" title="NH-07 Helang Mountain Bridge Washed Out">
           <span class="text-xs font-black font-mono">✕</span>
         </div>
       </div>
@@ -513,6 +538,74 @@ export const TacticalMap: React.FC = () => {
 
     blockageLayer.addLayer(cutMarker);
   }, [isHighwayCut]);
+
+  // Sync Shelters Layer (Relief Depots & Bed Occupancy Markers)
+  useEffect(() => {
+    if (!layersRef.current) return;
+    const { sheltersLayer } = layersRef.current;
+    sheltersLayer.clearLayers();
+
+    if (!showShelters) return;
+
+    shelters.forEach((shelter) => {
+      const occPct = Math.round((shelter.occupiedBeds / shelter.totalCapacityBeds) * 100);
+      const isCriticalCapacity = occPct >= 90;
+      const statusColor = isCriticalCapacity ? '#EF4444' : occPct >= 75 ? '#F59E0B' : '#10B981';
+
+      const shelterIcon = L.divIcon({
+        className: 'shelter-marker-container',
+        html: `
+          <div class="relative flex items-center justify-center cursor-pointer select-none group">
+            <div class="h-8 w-8 rounded-lg bg-indigo-600 border-2 border-white shadow-xl flex items-center justify-center text-white hover:scale-110 transition-transform">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 18h12"></path><path d="M3 22h18"></path><path d="m19 10-7-7-7 7"></path><path d="M9 22V12h6v10"></path>
+              </svg>
+            </div>
+            <span class="absolute -top-1.5 -right-1.5 px-1 py-0.2 rounded-full border border-surface-panel text-[8px] font-mono font-bold text-white shadow-sm" style="background-color: ${statusColor}">
+              ${occPct}%
+            </span>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      });
+
+      const marker = L.marker([shelter.location.lat, shelter.location.lng], { icon: shelterIcon });
+      marker.bindPopup(`
+        <div class="p-1.5 font-sans min-w-[240px] text-content-primary">
+          <div class="flex items-center justify-between border-b border-border-subtle pb-1">
+            <div class="font-bold text-xs text-indigo-300 font-mono">${shelter.name}</div>
+            <span class="text-[9px] font-mono px-1.5 py-0.2 rounded font-bold" style="background-color: ${statusColor}25; color: ${statusColor}; border: 1px solid ${statusColor}50">
+              ${shelter.status.replace('_', ' ')}
+            </span>
+          </div>
+          <div class="text-[11px] text-content-muted mt-1">
+            ${shelter.zoneName} · Lead: ${shelter.assignedDoctorInCharge}
+          </div>
+          <div class="mt-2 p-1.5 rounded bg-surface-canvas border border-border-subtle text-[10px] font-mono space-y-1">
+            <div class="flex justify-between">
+              <span>Bed Occupancy:</span>
+              <span class="font-bold text-white">${shelter.occupiedBeds} / ${shelter.totalCapacityBeds} (${occPct}%)</span>
+            </div>
+            <div class="flex justify-between text-amber-400">
+              <span>Food Stock:</span>
+              <span class="font-bold">${shelter.foodPacketsStock.toLocaleString()} pkts</span>
+            </div>
+            <div class="flex justify-between text-cyan-400">
+              <span>Potable Water:</span>
+              <span class="font-bold">${shelter.waterLitresStock.toLocaleString()} L</span>
+            </div>
+            <div class="flex justify-between text-rose-400">
+              <span>Trauma Kits:</span>
+              <span class="font-bold">${shelter.medicalKitsStock} kits</span>
+            </div>
+          </div>
+        </div>
+      `);
+
+      sheltersLayer.addLayer(marker);
+    });
+  }, [shelters, showShelters]);
 
   // Center smoothly on selected incident
   useEffect(() => {
@@ -616,6 +709,19 @@ export const TacticalMap: React.FC = () => {
 
                 <label className="flex items-center justify-between px-2 py-1 rounded hover:bg-surface-card cursor-pointer">
                   <span className="flex items-center gap-2">
+                    <Building2 className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>Shelters & Depots ({shelters.length})</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={showShelters}
+                    onChange={(e) => setShowShelters(e.target.checked)}
+                    className="rounded border-border-strong text-sky-500 focus:ring-0"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between px-2 py-1 rounded hover:bg-surface-card cursor-pointer">
+                  <span className="flex items-center gap-2">
                     <Crosshair className="h-3.5 w-3.5 text-purple-400" />
                     <span>Uber H3 Hexagons</span>
                   </span>
@@ -659,12 +765,16 @@ export const TacticalMap: React.FC = () => {
             <span className="text-content-secondary">High Priority</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-status-forgotten animate-pulse shrink-0" />
+            <span className="h-2 w-2 rounded-full bg-status-forgotten shrink-0" />
             <span className="text-purple-300 font-bold">Forgotten Pocket</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-sm bg-sky-400 shrink-0" />
             <span className="text-content-secondary">Active Dispatch</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-sm bg-indigo-500 shrink-0" />
+            <span className="text-indigo-300 font-bold">Relief Shelter</span>
           </div>
         </div>
 

@@ -39,7 +39,7 @@ export const PlanDiffModal: React.FC = () => {
         <div className="p-4 border-b border-border-subtle bg-status-critical/10 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-status-critical/20 border border-status-critical/40 flex items-center justify-center text-status-critical shrink-0">
-              <ShieldAlert className="h-6 w-6 animate-pulse" />
+              <ShieldAlert className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">

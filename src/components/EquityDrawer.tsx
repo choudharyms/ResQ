@@ -5,7 +5,13 @@ import {
   AlertTriangle,
   Zap,
   Sparkles,
+  ShieldAlert,
+  Volume2,
+  VolumeX,
+  TrendingDown,
+  TrendingUp,
 } from 'lucide-react';
+
 import { useDisasterStore } from '../stores/useDisasterStore';
 
 export const EquityDrawer: React.FC = () => {
@@ -80,12 +86,78 @@ export const EquityDrawer: React.FC = () => {
             </p>
           </div>
 
+          {/* Anti-Reporting Bias Countermeasure Card */}
+          <div className="p-3.5 rounded-lg bg-surface-card border border-indigo-500/40 space-y-3 shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                </div>
+                <h4 className="text-xs font-bold text-content-primary font-mono uppercase tracking-wider">
+                  Anti-Reporting Bias Correction
+                </h4>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-950/60 border border-indigo-500/40 text-indigo-300">
+                PS #2 Core Invariant
+              </span>
+            </div>
+
+            <p className="text-[11px] text-content-secondary leading-relaxed">
+              In early disaster hours, decision-makers instinctively concentrate units where the first reports arrive. ResQ counteracts this telemetry distortion by balancing raw report volume against demographic vulnerability.
+            </p>
+
+            {/* Side-by-Side Distortion Contrast */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {/* Loud Urban Hub */}
+              <div className="p-2.5 rounded bg-surface-panel/80 border border-border-subtle space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="font-bold text-content-primary flex items-center gap-1">
+                    <Volume2 className="h-3 w-3 text-sky-400" />
+                    Srinagar (Loud)
+                  </span>
+                  <span className="text-[10px] text-amber-400 font-bold bg-amber-950/40 px-1 py-0.2 rounded border border-amber-500/30">
+                    2.85x Volume
+                  </span>
+                </div>
+                <div className="text-[10px] font-mono text-content-muted space-y-0.5">
+                  <div>Raw Ingestion: <b className="text-content-primary">22 calls</b> (4G/LTE)</div>
+                  <div>True Need Index: <b className="text-content-primary">62.0</b></div>
+                  <div className="flex items-center gap-1 text-sky-300 pt-1">
+                    <TrendingDown className="h-3 w-3" />
+                    <span>Dampened to avoid over-allocation</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Silent Pocket */}
+              <div className="p-2.5 rounded bg-purple-950/30 border border-purple-500/40 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="font-bold text-purple-200 flex items-center gap-1">
+                    <VolumeX className="h-3 w-3 text-purple-400" />
+                    Guptkashi (Silent)
+                  </span>
+                  <span className="text-[10px] text-purple-300 font-bold bg-purple-900/60 px-1 py-0.2 rounded border border-purple-400/40">
+                    0.12x Volume
+                  </span>
+                </div>
+                <div className="text-[10px] font-mono text-purple-200/80 space-y-0.5">
+                  <div>Raw Ingestion: <b className="text-white">1 sat ping</b> (0 cell)</div>
+                  <div>True Need Index: <b className="text-white">58.0</b> (56 trapped)</div>
+                  <div className="flex items-center gap-1 text-purple-300 pt-1">
+                    <TrendingUp className="h-3 w-3" />
+                    <span>+1.85x Priority Multiplier applied</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Forgotten Zone High-Priority Alert Banner */}
           {forgottenZone && (
             <div className="p-3.5 rounded-lg bg-status-forgotten/15 border border-status-forgotten/50 space-y-2.5 shadow-lg relative overflow-hidden">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-full bg-status-forgotten text-white flex items-center justify-center pulse-forgotten shrink-0">
+                  <div className="h-7 w-7 rounded-full bg-status-forgotten text-white flex items-center justify-center shrink-0">
                     <AlertTriangle className="h-4 w-4" />
                   </div>
                   <div>
@@ -155,7 +227,7 @@ export const EquityDrawer: React.FC = () => {
                           : zone.status === 'UNDERSERVED'
                           ? 'bg-status-high/20 text-status-high'
                           : isZero
-                          ? 'bg-status-forgotten/30 text-purple-300 animate-pulse'
+                          ? 'bg-status-forgotten/30 text-purple-300'
                           : 'bg-status-critical/20 text-status-critical'
                       }`}
                     >
@@ -168,6 +240,17 @@ export const EquityDrawer: React.FC = () => {
                     <div>Deployed Assets: <b className="text-content-primary">{zone.resourcesDeployedWeight} pts</b></div>
                     <div>Unserved: <span className="text-content-muted">{zone.hoursWithoutResources} hrs</span></div>
                     <div>Vulnerability: <span className="text-amber-400">{(zone.vulnerabilityIndex * 100).toFixed(0)}% SVI</span></div>
+                    {zone.reportVolumeCount !== undefined && (
+                      <div>Ingested SOS: <span className="text-indigo-300">{zone.reportVolumeCount} reports</span></div>
+                    )}
+                    {zone.reportingBiasRatio !== undefined && (
+                      <div>
+                        Bias Ratio:{' '}
+                        <span className={zone.reportingBiasRatio < 0.5 ? 'text-purple-400 font-bold' : zone.reportingBiasRatio > 2.0 ? 'text-amber-400 font-bold' : 'text-content-muted'}>
+                          {zone.reportingBiasRatio}x {zone.biasCorrectionApplied ? '(Corrected)' : ''}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

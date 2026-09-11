@@ -157,4 +157,38 @@ export interface EquityZone {
   hoursWithoutResources: number;
   vulnerabilityIndex: number;
   activeIncidentsCount: number;
+  reportVolumeCount?: number;
+  reportingBiasRatio?: number;
+  biasCorrectionApplied?: boolean;
 }
+
+export interface ShelterFacility {
+  id: string;
+  name: string;
+  zoneId: string;
+  zoneName: string;
+  location: LocationCoords;
+  totalCapacityBeds: number;
+  occupiedBeds: number;
+  availableBeds: number;
+  status: 'OPERATIONAL' | 'NEAR_CAPACITY' | 'FULL';
+  medicalStaffCount: number;
+  contactRadio: string;
+  foodPacketsStock: number;
+  waterLitresStock: number;
+  medicalKitsStock: number;
+  assignedDoctorInCharge: string;
+}
+
+export interface FragmentarySOSReport {
+  id: string;
+  channel: 'SATELLITE_PING' | 'VHF_RADIO' | 'SMS_GATEWAY' | 'CITIZEN_WEB';
+  sourceCallsign: string;
+  rawSnippet: string;
+  receivedAt: string;
+  signalConfidence: number; // 0 to 1
+  zoneName: string;
+  associatedIncidentCode?: string;
+  status: 'INGESTED' | 'FUSED' | 'PENDING_VERIFICATION';
+}
+
