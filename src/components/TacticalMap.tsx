@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
+import 'leaflet.heat';
 import { cellToBoundary } from 'h3-js';
 import {
   Layers,
@@ -11,15 +12,17 @@ import {
   Shield,
   AlertTriangle,
   Building2,
+  Flame,
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
-import { Incident } from '../types/disaster';
 
 type BasemapType = 'dark' | 'satellite' | 'street';
 
 interface BasemapConfig {
   baseUrl: string;
   referenceUrl?: string;
+  transportationUrl?: string;
+  className?: string;
   attribution: string;
   label: string;
 }
@@ -35,6 +38,8 @@ const BASEMAP_CONFIGS: Record<BasemapType, BasemapConfig> = {
   satellite: {
     baseUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     referenceUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    transportationUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+    className: 'leaflet-satellite-tiles',
     attribution: '&copy; Esri &copy; Earthstar Geographics',
     label: 'Satellite Recon',
   },
@@ -44,6 +49,47 @@ const BASEMAP_CONFIGS: Record<BasemapType, BasemapConfig> = {
     label: 'Topo Physical',
   },
 };
+
+// Defined Disaster Operational Sector Boundaries (Garhwal Himalaya Theaters)
+const DEFINED_SECTORS = [
+  {
+    id: 'sec-alaknanda',
+    name: 'SECTOR ALPHA: ALAKNANDA BASIN',
+    color: '#38BDF8', // Cyan
+    coords: [
+      [30.2000, 78.7200],
+      [30.3300, 78.7500],
+      [30.3200, 79.0500],
+      [30.2500, 79.1200],
+      [30.1800, 78.8500],
+    ] as [number, number][],
+    center: [30.2600, 78.8800] as [number, number],
+  },
+  {
+    id: 'sec-joshimath',
+    name: 'SECTOR BRAVO: JOSHIMATH ALPINE REACHES',
+    color: '#F59E0B', // Amber
+    coords: [
+      [30.4800, 79.4600],
+      [30.6200, 79.5200],
+      [30.6000, 79.6400],
+      [30.4600, 79.5900],
+    ] as [number, number][],
+    center: [30.5400, 79.5400] as [number, number],
+  },
+  {
+    id: 'sec-mandakini',
+    name: 'SECTOR CHARLIE: MANDAKINI / GUPTKASHI',
+    color: '#A855F7', // Purple
+    coords: [
+      [30.4500, 79.0000],
+      [30.5800, 79.0300],
+      [30.5600, 79.1500],
+      [30.4200, 79.1200],
+    ] as [number, number][],
+    center: [30.5000, 79.0800] as [number, number],
+  },
+];
 
 // Helper: Calculate quadratic Bézier curved path for connecting nodes
 function computeCurvedCoordinates(
@@ -75,34 +121,21 @@ function computeCurvedCoordinates(
   return points;
 }
 
-// Helper: Get crisis icon SVG for incident pins
-function getCrisisIconSvg(eventType: Incident['eventType']): string {
-  switch (eventType) {
-    case 'FLOOD':
-      return `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c.6.5 1.2.8 2 .8s1.4-.3 2-.8c.6.5 1.2.8 2 .8s1.4-.3 2-.8c.6.5 1.2.8 2 .8s1.4-.3 2-.8c.6.5 1.2.8 2 .8s1.4-.3 2-.8"/><path d="M2 17c.6.5 1.2.8 2 .8s1.4-.3 2-.8c.6.5 1.2.8 2 .8s1.4-.3 2-.8c.6.5 1.2.8 2 .8s1.4-.3 2-.8c.6.5 1.2.8 2 .8s1.4-.3 2-.8"/></svg>`;
-    case 'LANDSLIDE':
-      return `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>`;
-    case 'COLLAPSE':
-      return `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/></svg>`;
-    case 'MEDICAL_SURGE':
-      return `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12"/><path d="M6 12h12"/></svg>`;
-    default:
-      return `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>`;
-  }
-}
-
 export const TacticalMap: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const referenceTileLayerRef = useRef<L.TileLayer | null>(null);
+  const transportationTileLayerRef = useRef<L.TileLayer | null>(null);
+  const heatmapLayerRef = useRef<any>(null);
 
   const layersRef = useRef<{
+    sectorsLayer: L.LayerGroup;
+    hexagonsLayer: L.LayerGroup;
+    routesLayer: L.LayerGroup;
     incidentsLayer: L.LayerGroup;
     assetsLayer: L.LayerGroup;
     sheltersLayer: L.LayerGroup;
-    hexagonsLayer: L.LayerGroup;
-    routesLayer: L.LayerGroup;
     blockageLayer: L.LayerGroup;
   } | null>(null);
 
@@ -122,6 +155,8 @@ export const TacticalMap: React.FC = () => {
   const [showShelters, setShowShelters] = useState(true);
   const [showHexagons, setShowHexagons] = useState(true);
   const [showRoutes, setShowRoutes] = useState(true);
+  const [showSectors, setShowSectors] = useState(true);
+  const [showHeatmap, setShowHeatmap] = useState(true);
   const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
   const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(10);
@@ -154,6 +189,7 @@ export const TacticalMap: React.FC = () => {
     }
 
     // Layer Groups
+    const sectorsLayer = L.layerGroup().addTo(map);
     const hexagonsLayer = L.layerGroup().addTo(map);
     const routesLayer = L.layerGroup().addTo(map);
     const incidentsLayer = L.layerGroup().addTo(map);
@@ -162,6 +198,7 @@ export const TacticalMap: React.FC = () => {
     const blockageLayer = L.layerGroup().addTo(map);
 
     layersRef.current = {
+      sectorsLayer,
       incidentsLayer,
       assetsLayer,
       sheltersLayer,
@@ -190,7 +227,7 @@ export const TacticalMap: React.FC = () => {
     };
   }, []);
 
-  // Handle Basemap Switch
+  // Handle Basemap Switch with Multi-Layer Boundaries & Transportation Support
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
@@ -202,14 +239,30 @@ export const TacticalMap: React.FC = () => {
       referenceTileLayerRef.current.remove();
       referenceTileLayerRef.current = null;
     }
+    if (transportationTileLayerRef.current) {
+      transportationTileLayerRef.current.remove();
+      transportationTileLayerRef.current = null;
+    }
 
     const cfg = BASEMAP_CONFIGS[basemap];
+
+    // 1. Base Layer (with satellite brightness class if applicable)
     const newBase = L.tileLayer(cfg.baseUrl, {
       maxZoom: 18,
       attribution: cfg.attribution,
+      className: cfg.className,
     }).addTo(mapInstanceRef.current);
     tileLayerRef.current = newBase;
 
+    // 2. Transportation Overlays (Roads, Passes & Bridges over Satellite)
+    if (cfg.transportationUrl) {
+      const newTrans = L.tileLayer(cfg.transportationUrl, {
+        maxZoom: 18,
+      }).addTo(mapInstanceRef.current);
+      transportationTileLayerRef.current = newTrans;
+    }
+
+    // 3. Boundaries and Places Overlays (Highways, Town & District Labels)
     if (cfg.referenceUrl) {
       const newRef = L.tileLayer(cfg.referenceUrl, {
         maxZoom: 18,
@@ -243,6 +296,86 @@ export const TacticalMap: React.FC = () => {
     if (!mapInstanceRef.current) return;
     mapInstanceRef.current.flyTo(coords, zoom, { duration: 0.8 });
   };
+
+  // Sync Defined Operational Sector Boundaries (Tactical Corridors with Defined Borders)
+  useEffect(() => {
+    if (!layersRef.current) return;
+    const { sectorsLayer } = layersRef.current;
+    sectorsLayer.clearLayers();
+
+    if (!showSectors) return;
+
+    DEFINED_SECTORS.forEach((sec) => {
+      const polygon = L.polygon(sec.coords, {
+        color: sec.color,
+        weight: 1.8,
+        dashArray: '6, 6',
+        fillColor: sec.color,
+        fillOpacity: 0.08,
+      });
+
+      polygon.bindTooltip(
+        `<div class="font-mono text-[10px] font-bold text-white px-1 py-0.5" style="color: ${sec.color}">${sec.name}</div>`,
+        { permanent: false, direction: 'center' }
+      );
+
+      sectorsLayer.addLayer(polygon);
+    });
+  }, [showSectors]);
+
+  // Sync Priority Distress Heatmap Layer (Thermal Plumes Across Mountain Sectors)
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    if (heatmapLayerRef.current) {
+      heatmapLayerRef.current.remove();
+      heatmapLayerRef.current = null;
+    }
+
+    if (!showHeatmap || incidents.length === 0) return;
+
+    // Generate weighted thermal distress points
+    const heatPoints: [number, number, number][] = incidents.flatMap((inc) => {
+      const intensity = Math.min(Math.max(inc.assessment.priorityScore / 100, 0.4), 1.0);
+      const points: [number, number, number][] = [[inc.location.lat, inc.location.lng, intensity]];
+
+      // If high casualties or critical priority, generate subtle local thermal dispersion plume
+      if (inc.assessment.priorityScore >= 80 || inc.casualties.affected > 40) {
+        const radius = 0.012;
+        const angles = [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5];
+        angles.forEach((ang) => {
+          points.push([
+            inc.location.lat + Math.sin(ang) * radius,
+            inc.location.lng + Math.cos(ang) * radius,
+            intensity * 0.65,
+          ]);
+        });
+      }
+
+      return points;
+    });
+
+    try {
+      const heat = (L as any).heatLayer(heatPoints, {
+        radius: 40,
+        blur: 24,
+        maxZoom: 13,
+        max: 1.0,
+        minOpacity: 0.28,
+        gradient: {
+          0.2: '#0284C7', // Sky Blue (Low)
+          0.4: '#10B981', // Emerald (Moderate)
+          0.6: '#F59E0B', // Amber (Elevated)
+          0.8: '#F97316', // Orange (Severe)
+          1.0: '#EF4444', // Crimson (Life Critical)
+        },
+      }).addTo(mapInstanceRef.current);
+
+      heatmapLayerRef.current = heat;
+    } catch {
+      // Fallback if heat layer fails
+    }
+  }, [incidents, showHeatmap]);
 
   // Sync Uber H3 Hexagons Layer
   useEffect(() => {
@@ -401,7 +534,7 @@ export const TacticalMap: React.FC = () => {
     });
   }, [activePlan, assets, incidents, selectedIncidentId, showRoutes, selectIncident]);
 
-  // Sync Destination Crisis Nodes (Refactored Tactical Teardrop Pins with Anchored Callout Badges)
+  // Sync Destination Crisis Nodes (Refactored Tactical Beacon with Priority Number, NO + or = Symbols)
   useEffect(() => {
     if (!layersRef.current) return;
     const { incidentsLayer } = layersRef.current;
@@ -419,28 +552,37 @@ export const TacticalMap: React.FC = () => {
         ? '#EF4444'
         : '#F59E0B';
 
-      const iconSvg = getCrisisIconSvg(incident.eventType);
-      const shortZoneName = incident.zoneName.replace(' Riverside', '').replace(' Mountain Hamlet', '').replace(' Raini Sector', '').replace(' Sangam', '');
+      const shortZoneName = incident.zoneName
+        .replace(' Riverside', '')
+        .replace(' Mountain Hamlet', '')
+        .replace(' Raini Sector', '')
+        .replace(' Sangam', '');
+
+      const eventTypeLabel = incident.eventType.replace('_', ' ');
 
       const markerHtml = `
-        <div class="tactical-incident-marker group relative cursor-pointer select-none -translate-x-1/2 -translate-y-full">
+        <div class="tactical-incident-marker group relative cursor-pointer select-none -translate-x-1/2 -translate-y-1/2">
           <!-- Top Anchored Callout Banner -->
           <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-950/95 border ${
             isSelected ? 'border-sky-400 ring-2 ring-sky-400/40 text-white shadow-sky-500/30' : 'border-slate-700/80 text-slate-200'
           } shadow-2xl whitespace-nowrap text-[10px] font-mono pointer-events-none transition-all">
             <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color: ${accentColor}"></span>
             <span class="font-bold tracking-tight">${shortZoneName}</span>
-            <span class="px-1 py-0.2 rounded font-black text-[9px]" style="background-color: ${accentColor}25; color: ${accentColor}">P${Math.round(incident.assessment.priorityScore)}</span>
+            <span class="px-1 py-0.2 rounded font-black text-[9px] uppercase ${
+              isCritical
+                ? 'bg-rose-950 text-rose-300 border border-rose-800/50'
+                : 'bg-amber-950 text-amber-300 border border-amber-800/50'
+            }">${eventTypeLabel}</span>
           </div>
 
-          <!-- Tactical Teardrop Shield Pin Body -->
+          <!-- Tactical Target Node (Clean Round Beacon with Priority Number, NO + or = math symbols) -->
           <div class="relative flex items-center justify-center">
             <!-- HUD Target Reticle (Corners Bracket when Selected) -->
             ${
               isSelected
                 ? `
-                <div class="absolute -inset-2 pointer-events-none">
-                  <div class="w-full h-full border border-sky-400/80 rounded-sm relative">
+                <div class="absolute -inset-2.5 pointer-events-none z-10">
+                  <div class="w-full h-full border border-sky-400/90 rounded-sm relative">
                     <span class="absolute -top-1 -left-1 w-2 h-2 border-t-2 border-l-2 border-sky-400"></span>
                     <span class="absolute -top-1 -right-1 w-2 h-2 border-t-2 border-r-2 border-sky-400"></span>
                     <span class="absolute -bottom-1 -left-1 w-2 h-2 border-b-2 border-l-2 border-sky-400"></span>
@@ -451,10 +593,9 @@ export const TacticalMap: React.FC = () => {
                 : ''
             }
 
-            <div class="h-8 w-8 rounded-t-full rounded-bl-full rotate-45 flex items-center justify-center shadow-2xl transition-transform group-hover:scale-110" style="background: linear-gradient(135deg, ${accentColor} 0%, #0B0F19 100%); border: 2px solid ${accentColor}">
-              <div class="-rotate-45 text-white flex items-center justify-center">
-                ${iconSvg}
-              </div>
+            <!-- Clean Beacon Body -->
+            <div style="background-color: ${accentColor}" class="h-7 w-7 rounded-full border-2 border-white shadow-2xl flex items-center justify-center text-white transition-transform group-hover:scale-115">
+              <span class="text-[11px] font-mono font-black tracking-tighter">${Math.round(incident.assessment.priorityScore)}</span>
             </div>
           </div>
         </div>
@@ -463,8 +604,8 @@ export const TacticalMap: React.FC = () => {
       const customIcon = L.divIcon({
         html: markerHtml,
         className: 'tactical-incident-container',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
       });
 
       const marker = L.marker([incident.location.lat, incident.location.lng], {
@@ -496,7 +637,7 @@ export const TacticalMap: React.FC = () => {
     });
   }, [incidents, selectedIncidentId, showIncidents, selectIncident]);
 
-  // Sync Origin Dispatch Nodes (Refactored Fleet Asset Vehicle Badges)
+  // Sync Origin Dispatch Nodes (Fleet Asset Vehicle Badges)
   useEffect(() => {
     if (!layersRef.current) return;
     const { assetsLayer } = layersRef.current;
@@ -712,7 +853,7 @@ export const TacticalMap: React.FC = () => {
           </button>
 
           {isLayerMenuOpen && (
-            <div className="absolute left-0 mt-1.5 w-60 rounded-lg bg-slate-900/95 backdrop-blur-md border border-slate-700/80 shadow-2xl p-3 space-y-2.5 text-xs text-white z-30 font-mono">
+            <div className="absolute left-0 mt-1.5 w-64 rounded-lg bg-slate-900/95 backdrop-blur-md border border-slate-700/80 shadow-2xl p-3 space-y-2.5 text-xs text-white z-30 font-mono">
               {/* Basemap Selection */}
               <div>
                 <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">
@@ -742,6 +883,19 @@ export const TacticalMap: React.FC = () => {
                 <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">
                   Tactical Overlays
                 </p>
+
+                <label className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Flame className="h-3.5 w-3.5 text-amber-400" />
+                    <span>Distress Heatmap</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={showHeatmap}
+                    onChange={(e) => setShowHeatmap(e.target.checked)}
+                    className="rounded border-slate-700 text-sky-500 focus:ring-0"
+                  />
+                </label>
 
                 <label className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
                   <span className="flex items-center gap-2">
@@ -798,6 +952,19 @@ export const TacticalMap: React.FC = () => {
                 <label className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
                   <span className="flex items-center gap-2">
                     <Crosshair className="h-3.5 w-3.5 text-purple-400" />
+                    <span>Sector Boundaries</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={showSectors}
+                    onChange={(e) => setShowSectors(e.target.checked)}
+                    className="rounded border-slate-700 text-sky-500 focus:ring-0"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Crosshair className="h-3.5 w-3.5 text-slate-400" />
                     <span>H3 Hexagons</span>
                   </span>
                   <input
@@ -878,6 +1045,20 @@ export const TacticalMap: React.FC = () => {
           </button>
         </div>
 
+        {/* 1-Click Heatmap Toggle Pill */}
+        <button
+          onClick={() => setShowHeatmap(!showHeatmap)}
+          className={`h-8 px-2.5 rounded-md backdrop-blur border text-xs font-semibold flex items-center gap-1.5 shadow-xl transition-all font-mono ${
+            showHeatmap
+              ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 ring-1 ring-amber-500/30'
+              : 'bg-slate-900/90 border-slate-700/80 text-slate-400 hover:text-white'
+          }`}
+          title="Toggle Thermal Distress Heatmap"
+        >
+          <Flame className="h-3 w-3 text-amber-400" />
+          <span className="hidden md:inline">Heatmap</span>
+        </button>
+
         {/* Recenter Bounds Button */}
         <button
           onClick={handleRecenter}
@@ -890,7 +1071,7 @@ export const TacticalMap: React.FC = () => {
       </div>
 
       {/* BOTTOM-LEFT: Streamlined Tactical Legend Strip */}
-      <div className="absolute bottom-3 left-3 z-10 px-3 py-1.5 rounded-md bg-slate-900/90 backdrop-blur border border-slate-700/80 shadow-2xl text-[10px] font-mono text-slate-300 flex items-center gap-4 hidden md:flex">
+      <div className="absolute bottom-3 left-3 z-10 px-3 py-1.5 rounded-md bg-slate-900/90 backdrop-blur border border-slate-700/80 shadow-2xl text-[10px] font-mono text-slate-300 flex items-center gap-3.5 hidden md:flex">
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-rose-500" />
           <span className="text-white font-bold">T1 Critical (≥80)</span>
@@ -911,8 +1092,14 @@ export const TacticalMap: React.FC = () => {
           <span className="h-2 w-2 rounded-sm bg-indigo-500" />
           <span className="text-indigo-300">Relief Shelter</span>
         </div>
+        {showHeatmap && (
+          <div className="flex items-center gap-1 text-amber-300 border-l border-slate-700 pl-2.5">
+            <Flame className="h-2.5 w-2.5 text-amber-400" />
+            <span>Thermal Plume Active</span>
+          </div>
+        )}
         {isHighwayCut && (
-          <div className="flex items-center gap-1 text-rose-400 font-bold border-l border-slate-700 pl-3">
+          <div className="flex items-center gap-1 text-rose-400 font-bold border-l border-slate-700 pl-2.5">
             <AlertTriangle className="h-3 w-3 shrink-0" />
             <span>NH-07 Blocked</span>
           </div>

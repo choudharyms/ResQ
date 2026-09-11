@@ -73,6 +73,11 @@
   background: #0B0F19 !important;
 }
 
+/* Satellite Basemap Brightness & Contrast Fix */
+.leaflet-satellite-tiles {
+  filter: brightness(1.22) contrast(1.15) saturate(1.25) !important;
+}
+
 /* Tactical Map Custom Popup */
 .leaflet-popup-content-wrapper {
   background: rgba(17, 24, 39, 0.95) !important;
