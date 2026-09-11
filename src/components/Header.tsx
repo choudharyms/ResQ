@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  AlertTriangle,
   Zap,
   Scale,
   WifiOff,
@@ -8,7 +7,6 @@ import {
   FilePlus,
   Compass,
   Sparkles,
-  Truck,
   Volume2,
   VolumeX,
   RefreshCw,
@@ -43,245 +41,203 @@ export const Header: React.FC = () => {
   const totalFleet = assets.length;
   const deployedPct = Math.round((deployedCount / Math.max(totalFleet, 1)) * 100);
 
-  const ndrfCount = assets.filter((a) => a.agency.includes('NDRF')).length;
-  const sdrfCount = assets.filter((a) => a.agency.includes('SDRF')).length;
-  const policeCount = assets.filter((a) => a.agency.includes('Police')).length;
-  const emsCount = assets.filter((a) => a.agency.includes('Medical') || a.agency.includes('EMS')).length;
-  const itbpCount = assets.filter((a) => a.agency.includes('ITBP') || a.agency.includes('Army')).length;
-
   return (
-    <header className="bg-surface-panel border-b border-border-subtle px-4 py-2 flex flex-col md:flex-row items-center justify-between gap-3 select-none sticky top-0 z-30 shadow-md">
-      {/* Left: Official ResQ Branding & Multi-Agency Pills */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2.5">
+    <header className="h-14 bg-surface-panel border-b border-border-subtle px-3.5 flex items-center justify-between select-none sticky top-0 z-30 shadow-sm shrink-0">
+      {/* LEFT ZONE: Branding, Valley Context & Fleet Capsule */}
+      <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        {/* Brand Logo & Version Badge */}
+        <div className="flex items-center gap-2">
           <img
             src="/assets/brand/resq-app-icon.png"
-            alt="ResQ Logo"
-            className="h-9 w-9 rounded-lg object-contain shadow-md shadow-sky-500/20 ring-1 ring-sky-400/40"
+            alt="ResQ"
+            className="h-7 w-7 rounded-md object-contain ring-1 ring-sky-500/30"
           />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold tracking-tight text-lg text-content-primary">
-                Res<span className="text-sky-400">Q</span>
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded bg-surface-card text-sky-400 border border-sky-500/30 font-mono">
-                EOC v2.0
-              </span>
-            </div>
-            <p className="text-xs text-content-muted flex items-center gap-1 font-mono">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-status-safe animate-ping" />
-              Uttarakhand Flash Flood | Alaknanda State EOC
-            </p>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-extrabold tracking-tight text-base text-content-primary">
+              Res<span className="text-sky-400">Q</span>
+            </span>
+            <span className="text-[9px] uppercase font-bold tracking-wider px-1 py-0.5 rounded bg-surface-card text-content-muted border border-border-subtle font-mono">
+              EOC v2.0
+            </span>
           </div>
         </div>
 
-        {/* Multi-Agency Badges with Official Crest Squircles */}
-        <div className="hidden xl:flex items-center gap-1.5 pl-3 border-l border-border-subtle">
-          <button
-            onClick={() => setFleetDrawerOpen(true)}
-            className="text-[11px] px-2 py-1 rounded-md bg-orange-950/30 hover:bg-orange-950/60 text-orange-300 border border-orange-700/50 font-mono font-medium flex items-center gap-1.5 transition-colors"
-            title="View NDRF Fleet Assets"
-          >
-            <img src="/assets/agencies/ndrf-icon.png" alt="NDRF" className="h-4 w-4 rounded-sm object-contain" />
-            <span>NDRF: {ndrfCount}</span>
-          </button>
-          <button
-            onClick={() => setFleetDrawerOpen(true)}
-            className="text-[11px] px-2 py-1 rounded-md bg-blue-950/30 hover:bg-blue-950/60 text-blue-300 border border-blue-700/50 font-mono font-medium flex items-center gap-1.5 transition-colors"
-            title="View SDRF Fleet Assets"
-          >
-            <img src="/assets/agencies/sdrf-icon.png" alt="SDRF" className="h-4 w-4 rounded-sm object-contain" />
-            <span>SDRF: {sdrfCount}</span>
-          </button>
-          <button
-            onClick={() => setFleetDrawerOpen(true)}
-            className="text-[11px] px-2 py-1 rounded-md bg-slate-900/40 hover:bg-slate-900/80 text-slate-300 border border-slate-700/50 font-mono font-medium flex items-center gap-1.5 transition-colors"
-            title="View Indian Police Fleet Assets"
-          >
-            <img src="/assets/agencies/police-icon.png" alt="Police" className="h-4 w-4 rounded-sm object-contain" />
-            <span>Police: {policeCount}</span>
-          </button>
-          <button
-            onClick={() => setFleetDrawerOpen(true)}
-            className="text-[11px] px-2 py-1 rounded-md bg-red-950/30 hover:bg-red-950/60 text-red-300 border border-red-700/50 font-mono font-medium flex items-center gap-1.5 transition-colors"
-            title="View EMS Medical Units"
-          >
-            <img src="/assets/agencies/ems-icon.png" alt="EMS" className="h-4 w-4 rounded-sm object-contain" />
-            <span>EMS: {emsCount}</span>
-          </button>
-          <button
-            onClick={() => setFleetDrawerOpen(true)}
-            className="text-[11px] px-2 py-1 rounded-md bg-emerald-950/30 hover:bg-emerald-950/60 text-emerald-300 border border-emerald-700/50 font-mono font-medium flex items-center gap-1.5 transition-colors"
-            title="View ITBP / NGO Partners"
-          >
-            <img src="/assets/agencies/ngo-icon.png" alt="NGO" className="h-4 w-4 rounded-sm object-contain" />
-            <span>ITBP: {itbpCount}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Center: Citywide Macro KPIs */}
-      <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto py-1">
-        <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-surface-canvas border border-border-subtle">
-          <div className="h-2 w-2 rounded-full bg-status-critical animate-pulse" />
-          <div className="text-left">
-            <p className="text-[10px] text-content-muted uppercase tracking-wider font-mono">Active Incidents</p>
-            <p className="text-sm font-bold font-mono text-content-primary">{activeCount}</p>
-          </div>
+        {/* Location / Operational Sector */}
+        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-card/60 border border-border-subtle text-xs font-mono">
+          <span className="h-1.5 w-1.5 rounded-full bg-status-safe animate-ping shrink-0" />
+          <span className="text-content-primary font-medium">Uttarakhand</span>
+          <span className="text-content-muted">·</span>
+          <span className="text-content-muted text-[11px]">Alaknanda Valley</span>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-surface-canvas border border-border-subtle">
-          <AlertTriangle className="h-3.5 w-3.5 text-status-critical" />
-          <div className="text-left">
-            <p className="text-[10px] text-content-muted uppercase tracking-wider font-mono">Critical</p>
-            <p className="text-sm font-bold font-mono text-status-critical">{criticalCount}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-surface-canvas border border-border-subtle">
-          <Compass className="h-3.5 w-3.5 text-status-dispatched" />
-          <div className="text-left">
-            <p className="text-[10px] text-content-muted uppercase tracking-wider font-mono">Fleet Deployed</p>
-            <p className="text-sm font-bold font-mono text-status-dispatched">{deployedPct}%</p>
-          </div>
-        </div>
-
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-md bg-surface-canvas border border-border-subtle">
-          <Scale className="h-3.5 w-3.5 text-status-forgotten" />
-          <div className="text-left">
-            <p className="text-[10px] text-content-muted uppercase tracking-wider font-mono">Unmet Need</p>
-            <p className="text-sm font-bold font-mono text-status-high">31%</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Right: Simulation Actions & Modals */}
-      <div className="flex items-center gap-2">
-        {/* Judge Demo Tour Launch Button */}
-        <button
-          onClick={() => setTourStep(tourStep ? null : 1)}
-          className={`px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${
-            tourStep
-              ? 'bg-indigo-600 text-white shadow-indigo-600/30 ring-2 ring-indigo-400'
-              : 'bg-gradient-to-r from-indigo-950/80 to-purple-950/80 hover:from-indigo-900 hover:to-purple-900 text-indigo-200 border border-indigo-500/50'
-          }`}
-          title="Interactive 4-Act Hackathon Judge Walkthrough"
-        >
-          <Sparkles className="h-3.5 w-3.5 text-indigo-400 animate-spin" />
-          <span>{tourStep ? `Tour: Act ${tourStep}` : 'Judge Demo Tour'}</span>
-        </button>
-
-        {/* Fleet Drawer Trigger */}
+        {/* Compact Unified Fleet Capsule (Clickable trigger for Fleet Drawer) */}
         <button
           onClick={() => setFleetDrawerOpen(true)}
-          className="px-2.5 py-1.5 rounded-md bg-surface-card hover:bg-surface-hover text-content-primary border border-border-strong text-xs font-semibold flex items-center gap-1.5 transition-all"
-          title="Open Multi-Agency Fleet Telemetry Drawer"
+          className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-md bg-surface-card hover:bg-surface-hover border border-border-subtle hover:border-border-strong text-xs text-content-secondary hover:text-content-primary transition-all font-mono group"
+          title="Open Multi-Agency Fleet Telemetry Drawer (NDRF, SDRF, ITBP, Police, EMS)"
         >
-          <Truck className="h-3.5 w-3.5 text-indigo-400" />
-          <span className="hidden xl:inline">Fleet</span>
+          <div className="flex items-center -space-x-1.5 overflow-hidden">
+            <img src="/assets/agencies/ndrf-icon.png" alt="NDRF" className="h-3.5 w-3.5 rounded-full ring-1 ring-surface-panel object-contain" />
+            <img src="/assets/agencies/sdrf-icon.png" alt="SDRF" className="h-3.5 w-3.5 rounded-full ring-1 ring-surface-panel object-contain" />
+            <img src="/assets/agencies/police-icon.png" alt="Police" className="h-3.5 w-3.5 rounded-full ring-1 ring-surface-panel object-contain" />
+            <img src="/assets/agencies/ems-icon.png" alt="EMS" className="h-3.5 w-3.5 rounded-full ring-1 ring-surface-panel object-contain" />
+            <img src="/assets/agencies/ngo-icon.png" alt="ITBP" className="h-3.5 w-3.5 rounded-full ring-1 ring-surface-panel object-contain" />
+          </div>
+          <span className="text-content-primary font-semibold">{totalFleet} Units</span>
+          <span className="text-[10px] text-content-muted group-hover:text-sky-400 transition-colors">Fleet →</span>
+        </button>
+      </div>
+
+      {/* CENTER ZONE: Unified Tactical HUD Telemetry Bar (Segmented Control) */}
+      <div className="hidden sm:flex items-center h-8 px-3 rounded-md bg-surface-card/80 border border-border-subtle text-xs font-mono divide-x divide-border-subtle shadow-inner">
+        {/* Active & Critical Incidents */}
+        <div className="flex items-center gap-1.5 pr-3">
+          <span className="h-2 w-2 rounded-full bg-status-critical animate-pulse shrink-0" />
+          <span className="text-content-primary font-bold">{activeCount}</span>
+          <span className="text-content-muted text-[11px]">Active</span>
+          {criticalCount > 0 && (
+            <span className="text-[10px] text-status-critical font-bold bg-status-critical/10 px-1 py-0.5 rounded border border-status-critical/20 ml-0.5">
+              {criticalCount} Crit
+            </span>
+          )}
+        </div>
+
+        {/* Fleet Deployment Ratio */}
+        <div className="flex items-center gap-1.5 px-3">
+          <Compass className="h-3 w-3 text-sky-400 shrink-0" />
+          <span className="text-content-primary font-bold">{deployedPct}%</span>
+          <span className="text-content-muted text-[11px]">Deployed</span>
+        </div>
+
+        {/* Fairness / Unmet Need Ratio */}
+        <div className="flex items-center gap-1.5 pl-3">
+          <Scale className="h-3 w-3 text-status-forgotten shrink-0" />
+          <span className="text-content-primary font-bold">31%</span>
+          <span className="text-content-muted text-[11px]">Unmet</span>
+        </div>
+      </div>
+
+      {/* RIGHT ZONE: Unified Command Controls & Action Cluster */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {/* Hackathon Demo Tour Trigger */}
+        <button
+          onClick={() => setTourStep(tourStep ? null : 1)}
+          className={`h-8 px-2.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all border ${
+            tourStep
+              ? 'bg-sky-500/15 border-sky-500/40 text-sky-300 ring-1 ring-sky-400/30'
+              : 'bg-surface-card hover:bg-surface-hover border-border-subtle hover:border-border-strong text-content-secondary hover:text-content-primary'
+          }`}
+          title="Interactive 4-Act Decision Support Tour"
+        >
+          <Sparkles className={`h-3 w-3 ${tourStep ? 'text-sky-400 animate-spin' : 'text-sky-400/80'}`} />
+          <span className="hidden xl:inline">{tourStep ? `Tour: Act ${tourStep}` : 'Demo Tour'}</span>
         </button>
 
-        {/* Toggle Road Cut Trigger Button */}
+        {/* Road Cut Simulation Toggle */}
         <button
           onClick={toggleHighwayCut}
-          className={`px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm ${
+          className={`h-8 px-2.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all border ${
             isHighwayCut
-              ? 'bg-status-critical text-white shadow-status-critical/20 ring-2 ring-status-critical/50'
-              : 'bg-surface-card hover:bg-surface-hover text-content-primary border border-border-strong'
+              ? 'bg-red-950/40 border-red-500/50 text-red-300 ring-1 ring-red-500/30'
+              : 'bg-surface-card hover:bg-surface-hover border-border-subtle hover:border-border-strong text-content-secondary hover:text-content-primary'
           }`}
           title="Simulate cloudburst damage washing out NH-07 Helang bridge"
         >
-          <Zap className={`h-3.5 w-3.5 ${isHighwayCut ? 'text-white' : 'text-amber-400'}`} />
-          <span>{isHighwayCut ? 'NH-07 Severed' : 'Cut NH-07'}</span>
+          <Zap className={`h-3 w-3 ${isHighwayCut ? 'text-red-400 fill-red-400' : 'text-amber-400'}`} />
+          <span className="hidden md:inline">{isHighwayCut ? 'NH-07 Blocked' : 'Cut Road'}</span>
         </button>
 
         {/* Equity Lens Drawer Trigger */}
         <button
           onClick={() => setEquityDrawerOpen(true)}
-          className="px-2.5 py-1.5 rounded-md bg-surface-card hover:bg-surface-hover text-content-primary border border-border-strong text-xs font-semibold flex items-center gap-1.5 transition-all relative"
-          title="Open Sector Equity Lens"
+          className="h-8 px-2.5 rounded-md bg-surface-card hover:bg-surface-hover border border-border-subtle hover:border-border-strong text-xs font-semibold text-content-secondary hover:text-content-primary flex items-center gap-1.5 transition-all relative"
+          title="Open Sector Equity & Forgotten Zone Lens (Hotkey: E)"
         >
-          <Scale className="h-3.5 w-3.5 text-status-forgotten" />
-          <span className="hidden sm:inline">Equity</span>
-          <span className="h-2 w-2 rounded-full bg-status-forgotten animate-ping absolute -top-0.5 -right-0.5" />
+          <Scale className="h-3 w-3 text-status-forgotten" />
+          <span className="hidden md:inline">Equity</span>
+          <span className="h-1.5 w-1.5 rounded-full bg-status-forgotten animate-ping absolute top-1 right-1" />
         </button>
 
-        {/* Mobile Field SOS Form Trigger */}
+        {/* Primary Action: + SOS Report Form */}
         <button
           onClick={() => setFieldFormOpen(true)}
-          className="px-2.5 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
+          className="h-8 px-3 rounded-md bg-sky-500 hover:bg-sky-400 text-sky-950 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shadow-sky-500/20 active:scale-95"
+          title="Submit Field Emergency Distress Report"
         >
-          <FilePlus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">+ SOS</span>
+          <FilePlus className="h-3.5 w-3.5 stroke-[2.5]" />
+          <span>+ SOS</span>
         </button>
+
+        {/* Subtle Vertical Group Divider */}
+        <div className="h-4 w-px bg-border-subtle mx-0.5 hidden sm:block" />
 
         {/* Tactical Sound Toggle */}
         <button
           onClick={toggleMute}
-          className={`p-1.5 rounded-md text-xs transition-all border ${
+          className={`h-8 w-8 rounded-md flex items-center justify-center transition-all border ${
             isMuted
               ? 'bg-surface-card border-border-subtle text-content-muted hover:text-content-primary'
-              : 'bg-indigo-950/40 border-indigo-800/50 text-indigo-400'
+              : 'bg-surface-card border-border-subtle text-sky-400 hover:border-border-strong'
           }`}
-          title={isMuted ? 'Unmute tactical audio' : 'Mute tactical audio'}
+          title={isMuted ? 'Unmute tactical audio feedback' : 'Mute tactical audio feedback'}
         >
           {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
         </button>
 
-        {/* Backend API Connection Status Badge */}
-        <button
-          onClick={() => hydrateFromBackend()}
-          disabled={isSyncing}
-          className={`px-2 py-1.5 rounded-md text-xs font-mono flex items-center gap-1.5 transition-all border ${
-            isApiConnected
-              ? 'bg-emerald-950/30 border-emerald-700/50 text-emerald-400 hover:bg-emerald-950/60'
-              : 'bg-amber-950/30 border-amber-700/50 text-amber-400 hover:bg-amber-950/60'
-          }`}
-          title={
-            isApiConnected
-              ? `Express REST API :3001 Active • Synced at ${lastSyncTime || 'now'} (Click to refresh)`
-              : 'Standalone Mathematical Simulation Active (Click to reconnect to API :3001)'
-          }
-        >
-          <span className="relative flex h-2 w-2">
-            {isApiConnected && (
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            )}
-            <span
-              className={`relative inline-flex rounded-full h-2 w-2 ${
-                isApiConnected ? 'bg-emerald-500' : 'bg-amber-500'
-              }`}
+        {/* Consolidated API & Connectivity Telemetry Pill */}
+        <div className="flex items-center h-8 rounded-md bg-surface-card border border-border-subtle text-xs font-mono overflow-hidden">
+          {/* API Health & Manual Refresh */}
+          <button
+            onClick={() => hydrateFromBackend()}
+            disabled={isSyncing}
+            className="h-full px-2 flex items-center gap-1.5 hover:bg-surface-hover text-content-secondary hover:text-content-primary transition-all"
+            title={
+              isApiConnected
+                ? `Express REST API :3001 Active • Synced at ${lastSyncTime || 'now'} (Click to refresh)`
+                : 'Local Mathematical Simulation Engine Active'
+            }
+          >
+            <span className="relative flex h-2 w-2">
+              {isApiConnected && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              )}
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  isApiConnected ? 'bg-emerald-500' : 'bg-amber-500'
+                }`}
+              />
+            </span>
+            <span className="hidden xl:inline text-[11px] font-medium">
+              {isSyncing ? 'Syncing' : isApiConnected ? 'API Live' : 'Sim'}
+            </span>
+            <RefreshCw
+              className={`h-2.5 w-2.5 text-content-muted ${isSyncing ? 'animate-spin text-emerald-400' : ''}`}
             />
-          </span>
-          <span className="hidden xl:inline font-bold">
-            {isSyncing ? 'Syncing...' : isApiConnected ? 'API :3001' : 'Sim Engine'}
-          </span>
-          <RefreshCw
-            className={`h-3 w-3 text-content-muted hover:text-content-primary ${
-              isSyncing ? 'animate-spin text-emerald-400' : ''
-            }`}
-          />
-        </button>
+          </button>
 
-        {/* Offline / Degraded Toggle */}
-        <button
-          onClick={toggleDegradedMode}
-          className={`px-2 py-1.5 rounded-md text-xs font-mono flex items-center gap-1 transition-all border ${
-            isDegradedMode
-              ? 'bg-status-high/20 border-status-high text-status-high'
-              : 'bg-surface-card border-border-subtle text-content-muted hover:text-content-primary'
-          }`}
-          title={isDegradedMode ? 'Offline mode active (Click to simulate reconnect)' : 'Simulate offline network outage'}
-        >
-          {isDegradedMode ? (
-            <>
-              <WifiOff className="h-3.5 w-3.5 animate-pulse" />
-              <span className="font-bold">{offlineQueueCount > 0 ? `${offlineQueueCount}` : 'Offline'}</span>
-            </>
-          ) : (
-            <Wifi className="h-3.5 w-3.5 text-status-safe" />
-          )}
-        </button>
+          {/* Micro-divider */}
+          <div className="h-3.5 w-px bg-border-subtle" />
+
+          {/* Offline / Degraded Network Mode Toggle */}
+          <button
+            onClick={toggleDegradedMode}
+            className={`h-full px-2 flex items-center gap-1 transition-all ${
+              isDegradedMode
+                ? 'bg-amber-500/15 text-amber-300'
+                : 'hover:bg-surface-hover text-content-muted hover:text-content-primary'
+            }`}
+            title={isDegradedMode ? 'Offline mode active (Click to simulate reconnect)' : 'Simulate network outage'}
+          >
+            {isDegradedMode ? (
+              <>
+                <WifiOff className="h-3 w-3 text-amber-400 animate-pulse" />
+                <span className="font-bold text-[11px]">{offlineQueueCount > 0 ? `${offlineQueueCount}` : 'Offline'}</span>
+              </>
+            ) : (
+              <Wifi className="h-3 w-3 text-content-muted" />
+            )}
+          </button>
+        </div>
       </div>
     </header>
   );
