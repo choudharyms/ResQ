@@ -8,6 +8,7 @@ const EnvSchema = z.object({
   PORT:                      z.coerce.number().default(3001),
   DATABASE_URL:              z.string().min(1, 'DATABASE_URL is required'),
   SUPABASE_URL:              z.string().url('SUPABASE_URL must be a valid URL'),
+  SUPABASE_ANON_KEY:         z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
   GEMINI_API_KEY:            z.string().min(1, 'GEMINI_API_KEY is required'),
 });

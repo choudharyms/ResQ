@@ -136,7 +136,7 @@ INSERT INTO incidents (
      ARRAY['medical_als','evac'],
      2, 0, 1, 1,
      ST_SetSRID(ST_MakePoint(75.7830, 26.9250), 4326),
-     '872a1072fffffff', '892a1072003ffff', 'Open'),
+     '873da218cffffff', '893da218c03ffff', 'Open'),
 
     -- T1 Immediate — Water Evacuation (family on roof)
     ('c0000001-0000-0000-0000-000000000002',
@@ -146,7 +146,7 @@ INSERT INTO incidents (
      ARRAY['water_rescue','evac'],
      5, 1, 0, 0,
      ST_SetSRID(ST_MakePoint(75.7700, 26.9180), 4326),
-     '872a1072fffffff', '892a1072007ffff', 'Open'),
+     '873da2181ffffff', '893da218123ffff', 'Open'),
 
     -- T1 Immediate — Water Evacuation (elderly couple)
     ('c0000001-0000-0000-0000-000000000003',
@@ -156,7 +156,7 @@ INSERT INTO incidents (
      ARRAY['water_rescue','evac'],
      2, 0, 2, 1,
      ST_SetSRID(ST_MakePoint(75.7620, 26.9120), 4326),
-     '872a1072fffffff', '892a107200fffff', 'Open'),
+     '873da2181ffffff', '893da218173ffff', 'Open'),
 
     -- T1 Immediate — Structural Extrication
     ('c0000001-0000-0000-0000-000000000004',
@@ -166,7 +166,7 @@ INSERT INTO incidents (
      ARRAY['search_rescue','structural'],
      3, 1, 0, 2,
      ST_SetSRID(ST_MakePoint(75.7960, 26.9040), 4326),
-     '872a1073fffffff', '892a1073003ffff', 'Open'),
+     '873da2188ffffff', '893da21885bffff', 'Open'),
 
     -- T1 Immediate — Power / Medical Equipment
     ('c0000001-0000-0000-0000-000000000005',
@@ -176,7 +176,7 @@ INSERT INTO incidents (
      ARRAY['medical_als','road_capable'],
      1, 0, 0, 1,
      ST_SetSRID(ST_MakePoint(75.7550, 26.8980), 4326),
-     '872a1070fffffff', '892a1070007ffff', 'Open'),
+     '873da2183ffffff', '893da218313ffff', 'Open'),
 
     -- T2 Delayed — Water Evacuation
     ('c0000001-0000-0000-0000-000000000006',
@@ -186,7 +186,7 @@ INSERT INTO incidents (
      ARRAY['water_rescue','evac'],
      8, 0, 0, 0,
      ST_SetSRID(ST_MakePoint(75.8100, 26.8850), 4326),
-     '872a1073fffffff', '892a107300fffff', 'Open'),
+     '873da20a4ffffff', '893da218a6fffff', 'Open'),
 
     -- T2 Delayed — Structural Extrication
     ('c0000001-0000-0000-0000-000000000007',
@@ -196,7 +196,7 @@ INSERT INTO incidents (
      ARRAY['search_rescue','structural'],
      1, 0, 0, 1,
      ST_SetSRID(ST_MakePoint(75.7750, 26.9350), 4326),
-     '872a1074fffffff', '892a1074003ffff', 'Open'),
+     '873da218cffffff', '893da218c93ffff', 'Open'),
 
     -- T3 Minimal — Food & Water Supply
     ('c0000001-0000-0000-0000-000000000008',
@@ -206,7 +206,7 @@ INSERT INTO incidents (
      ARRAY['supply_drop'],
      60, 8, 12, 0,
      ST_SetSRID(ST_MakePoint(75.7680, 26.9080), 4326),
-     '872a1072fffffff', '892a107200bffff', 'Open'),
+     '873da218effffff', '893da21816fffff', 'Open'),
 
     -- T3 Minimal — Water Evacuation (voluntary, not urgent)
     ('c0000001-0000-0000-0000-000000000009',
@@ -216,7 +216,7 @@ INSERT INTO incidents (
      ARRAY['water_rescue','evac'],
      4, 0, 1, 0,
      ST_SetSRID(ST_MakePoint(75.8200, 26.8780), 4326),
-     '872a1077fffffff', '892a1077003ffff', 'Open'),
+     '873da20a4ffffff', '893da20a40bffff', 'Open'),
 
     -- Unclassified — requires recon
     ('c0000001-0000-0000-0000-000000000010',
@@ -226,4 +226,4 @@ INSERT INTO incidents (
      ARRAY['recon'],
      1, 0, 0, 0,
      ST_SetSRID(ST_MakePoint(75.7820, 26.9010), 4326),
-     '872a1073fffffff', '892a1073007ffff', 'Open');
+     '873da218effffff', '893da218e73ffff', 'Open');

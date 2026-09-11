@@ -40,10 +40,22 @@ export async function callProc<T>(
   procName: string,
   args: Record<string, unknown>
 ): Promise<T> {
+  // Validate identifier names to prevent SQL injection
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(procName)) {
+    throw new Error(`Invalid procedure name: ${procName}`);
+  }
   const keys   = Object.keys(args);
+  for (const k of keys) {
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(k)) {
+      throw new Error(`Invalid parameter key: ${k}`);
+    }
+  }
   const values = Object.values(args);
   const params = keys.map((k, i) => `p_${k} => $${i + 1}`).join(', ');
   const sql    = `SELECT ${procName}(${params}) AS result`;
   const { rows } = await pool.query(sql, values);
+  if (!rows || rows.length === 0 || !rows[0]) {
+    throw new Error(`Procedure ${procName} returned no rows`);
+  }
   return rows[0].result as T;
 }

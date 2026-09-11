@@ -11,6 +11,8 @@ router.get('/', async (_req: Request, res: Response) => {
   try {
     const rows = await getHexEquityData();
 
+    res.setHeader('Cache-Control', 'public, max-age=5');
+
     const features = rows.map(row => ({
       type:       'Feature' as const,
       properties: row,
