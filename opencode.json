@@ -1,0 +1,32 @@
+{
+  "mcp": {
+    "plan": {
+      "type": "remote",
+      "url": "https://plan.agent-native.com/_agent-native/mcp",
+      "enabled": true
+    },
+    "StitchMCP": {
+      "type": "local",
+      "command": "npx -y mcp-remote https://stitch.googleapis.com/mcp --header X-Goog-Api-Key:${STITCH_API_KEY}",
+      "enabled": true
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
+      },
+      "enabled": true
+    },
+    "github": {
+      "type": "local",
+      "command": "npx -y @modelcontextprotocol/server-github",
+      "enabled": true
+    },
+    "supabase": {
+      "type": "remote",
+      "url": "https://mcp.supabase.com/mcp?project_ref=hyufwkvflueczxgxyoyu&features=storage%2Cbranching%2Cfunctions%2Cdevelopment%2Cdebugging%2Cdatabase%2Caccount%2Cdocs",
+      "enabled": true
+    }
+  }
+}

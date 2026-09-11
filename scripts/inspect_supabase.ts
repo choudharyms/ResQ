@@ -20,6 +20,26 @@ async function query(sql: string) {
 async function main() {
   console.log('--- ResQ Supabase Security & Advisory Inspection ---');
 
+  const relations = await query(`
+    SELECT
+      c.relname as name,
+      CASE c.relkind
+        WHEN 'r' THEN 'table'
+        WHEN 'v' THEN 'view'
+        WHEN 'm' THEN 'materialized_view'
+      END as type,
+      pg_catalog.pg_get_userbyid(c.relowner) as owner,
+      c.relrowsecurity as rls_enabled,
+      c.reloptions
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind IN ('r', 'v', 'm')
+    ORDER BY c.relname;
+  `);
+  console.log('\nPublic Schema Relations:');
+  console.table(relations);
+
   const policies = await query(`
     SELECT tablename, policyname, roles, cmd, with_check 
     FROM pg_policies 
@@ -38,13 +58,25 @@ async function main() {
   console.log('\nFunction Configuration (search_path):');
   console.table(procs);
 
-  const mvGrants = await query(`
-    SELECT grantee, privilege_type 
-    FROM information_schema.role_table_grants 
-    WHERE table_name = 'mv_hex_equity' AND grantee IN ('anon', 'authenticated');
+  const postgisExt = await query(`
+    SELECT extname, extowner::regrole, n.nspname as schema
+    FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace
+    WHERE extname = 'postgis';
   `);
-  console.log('\nmv_hex_equity public grants:');
-  console.table(mvGrants);
+  console.log('\nPostGIS Extension Status:');
+  console.table(postgisExt);
+
+  const geoTest = await query(`
+    SELECT
+      a.call_sign,
+      i.primary_need,
+      ROUND(ST_Distance(a.location::geography, i.location::geography)::numeric, 2) as distance_meters
+    FROM assets a, incidents i
+    LIMIT 1;
+  `);
+  console.log('\nLive Geospatial Distance Calculation:');
+  console.table(geoTest);
 }
 
 main();
