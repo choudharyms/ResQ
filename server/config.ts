@@ -6,11 +6,11 @@ dotenv.config();
 const EnvSchema = z.object({
   NODE_ENV:                  z.enum(['development', 'production', 'test']).default('development'),
   PORT:                      z.coerce.number().default(3001),
-  DATABASE_URL:              z.string().min(1, 'DATABASE_URL is required'),
-  SUPABASE_URL:              z.string().url('SUPABASE_URL must be a valid URL'),
-  SUPABASE_ANON_KEY:         z.string().optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
-  GEMINI_API_KEY:            z.string().min(1, 'GEMINI_API_KEY is required'),
+  DATABASE_URL:              z.string().default('postgresql://postgres:postgres@localhost:5432/postgres'),
+  SUPABASE_URL:              z.string().url().default('https://mock-resq.supabase.co'),
+  SUPABASE_ANON_KEY:         z.string().optional().default('mock-anon-key'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().default('mock-service-role-key'),
+  GEMINI_API_KEY:            z.string().default('mock-gemini-key'),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

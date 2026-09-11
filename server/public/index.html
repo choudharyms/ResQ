@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResQ — SAR Autonomous Resource Allocation Console</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #3b82f6;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .title-area h1 {
+      font-size: 24px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-pending { background: #374151; color: #9ca3af; }
+    .badge-pass { background: #064e3b; color: #34d399; }
+    .badge-fail { background: #7f1d1d; color: #f87171; }
+    .badge-running { background: #1e3a8a; color: #60a5fa; }
+
+    .metrics-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .metric-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .metric-val { font-size: 28px; font-weight: 700; margin-top: 4px; }
+
+    .control-panel {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 24px;
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+
+    button.btn-primary {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.15s;
+    }
+    button.btn-primary:hover { background: #1d4ed8; }
+
+    button.btn-test {
+      background: #1f2937;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+      padding: 6px 12px;
+      font-size: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button.btn-test:hover { background: #374151; }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .test-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .test-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .test-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .test-endpoint {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .test-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 8px;
+      border-top: 1px solid #1f2937;
+    }
+
+    .test-timing {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    pre#response-log {
+      background: #030712;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: #10b981;
+      max-height: 250px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title-area">
+      <h1>🚨 ResQ — Command & Verification Console</h1>
+      <div style="font-size: 13px; color: var(--text-muted);">Jaipur / Dravyavati River Flood Scenario — Verification Harness</div>
+    </div>
+    <div id="connection-status">
+      <span class="badge badge-pass" id="badge-api">API Active</span>
+    </div>
+  </header>
+
+  <div class="metrics-strip">
+    <div class="metric-card">
+      <div class="metric-title">Tests Run</div>
+      <div class="metric-val" id="metric-tests">0 / 11</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Pass Rate</div>
+      <div class="metric-val" id="metric-pass-rate" style="color: var(--success);">0%</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">Avg Latency</div>
+      <div class="metric-val" id="metric-latency" style="font-family: var(--font-mono);">0ms</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-title">System Health</div>
+      <div class="metric-val" id="metric-health" style="color: var(--success); font-size: 20px;">HEALTHY</div>
+    </div>
+  </div>
+
+  <div class="control-panel">
+    <button id="run-all-tests" class="btn-primary" onclick="runAllTests()">⚡ Run All DOM Tests</button>
+    <div id="test-summary" data-total="11" data-passed="0" data-failed="0" style="font-size: 14px; font-weight: 600;">
+      Ready to test.
+    </div>
+  </div>
+
+  <div class="test-grid" id="test-grid">
+    <!-- Test Cards dynamically rendered or structured for DOM agent -->
+    <div class="test-card" id="card-health">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">Health Check</div>
+          <div class="test-endpoint">GET /health</div>
+        </div>
+        <span class="badge badge-pending" id="badge-health">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-health" onclick="runTest('health')">Execute</button>
+        <span class="test-timing" id="time-health">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-assets">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">Fleet Inventory</div>
+          <div class="test-endpoint">GET /api/assets</div>
+        </div>
+        <span class="badge badge-pending" id="badge-assets">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-assets" onclick="runTest('assets')">Execute</button>
+        <span class="test-timing" id="time-assets">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-telemetry">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">Asset GPS Telemetry</div>
+          <div class="test-endpoint">PATCH /api/assets/:id/telemetry</div>
+        </div>
+        <span class="badge badge-pending" id="badge-telemetry">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-telemetry" onclick="runTest('telemetry')">Execute</button>
+        <span class="test-timing" id="time-telemetry">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-incidents-get">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">Incident Triage Queue</div>
+          <div class="test-endpoint">GET /api/incidents</div>
+        </div>
+        <span class="badge badge-pending" id="badge-incidents-get">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-incidents-get" onclick="runTest('incidents-get')">Execute</button>
+        <span class="test-timing" id="time-incidents-get">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-incident-post">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">SOS Intake & Auto-Allocation</div>
+          <div class="test-endpoint">POST /api/incidents</div>
+        </div>
+        <span class="badge badge-pending" id="badge-incident-post">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-incident-post" onclick="runTest('incident-post')">Execute</button>
+        <span class="test-timing" id="time-incident-post">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-incident-id">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">Incident Detail & Active Alloc</div>
+          <div class="test-endpoint">GET /api/incidents/:id</div>
+        </div>
+        <span class="badge badge-pending" id="badge-incident-id">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-incident-id" onclick="runTest('incident-id')">Execute</button>
+        <span class="test-timing" id="time-incident-id">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-incident-status">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">Incident Status Transition</div>
+          <div class="test-endpoint">PATCH /api/incidents/:id/status</div>
+        </div>
+        <span class="badge badge-pending" id="badge-incident-status">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-incident-status" onclick="runTest('incident-status')">Execute</button>
+        <span class="test-timing" id="time-incident-status">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-equity">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">H3 Equity Choropleth</div>
+          <div class="test-endpoint">GET /api/equity</div>
+        </div>
+        <span class="badge badge-pending" id="badge-equity">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-equity" onclick="runTest('equity')">Execute</button>
+        <span class="test-timing" id="time-equity">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-neglected">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">Top Neglected Hexes</div>
+          <div class="test-endpoint">GET /api/equity/neglected</div>
+        </div>
+        <span class="badge badge-pending" id="badge-neglected">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-neglected" onclick="runTest('neglected')">Execute</button>
+        <span class="test-timing" id="time-neglected">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-degrade">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">Failover Degradation</div>
+          <div class="test-endpoint">POST /api/simulate/degrade</div>
+        </div>
+        <span class="badge badge-pending" id="badge-degrade">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-degrade" onclick="runTest('degrade')">Execute</button>
+        <span class="test-timing" id="time-degrade">-</span>
+      </div>
+    </div>
+
+    <div class="test-card" id="card-sync">
+      <div class="test-card-header">
+        <div>
+          <div class="test-title">Offline LWW Batch Sync</div>
+          <div class="test-endpoint">POST /api/sync/batch</div>
+        </div>
+        <span class="badge badge-pending" id="badge-sync">Pending</span>
+      </div>
+      <div class="test-footer">
+        <button class="btn-test" id="btn-test-sync" onclick="runTest('sync')">Execute</button>
+        <span class="test-timing" id="time-sync">-</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 8px; font-weight: 600; font-size: 14px;">Live Response Log</div>
+  <pre id="response-log">// Test responses will appear here...</pre>
+
+  <script>
+    const TEST_KEYS = [
+      'health', 'assets', 'telemetry', 'incidents-get', 'incident-post',
+      'incident-id', 'incident-status', 'equity', 'neglected', 'degrade', 'sync'
+    ];
+
+    let testResults = {};
+    let createdIncidentId = 'c0000001-0000-0000-0000-000000000001';
+    let targetAssetId = 'b0000001-0000-0000-0000-000000000001';
+
+    function log(msg) {
+      const el = document.getElementById('response-log');
+      el.textContent = (typeof msg === 'object' ? JSON.stringify(msg, null, 2) : msg);
+    }
+
+    async function executeApi(key) {
+      const t0 = performance.now();
+      let res, data;
+
+      switch(key) {
+        case 'health':
+          res = await fetch('/health');
+          data = await res.json();
+          return { ok: data.ok === true, data, elapsed: performance.now() - t0 };
+
+        case 'assets':
+          res = await fetch('/api/assets');
+          data = await res.json();
+          if (data.data && data.data.length > 0) targetAssetId = data.data[0].id;
+          return { ok: data.ok && Array.isArray(data.data), data, elapsed: performance.now() - t0 };
+
+        case 'telemetry':
+          res = await fetch(`/api/assets/${targetAssetId}/telemetry`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude: 26.921, longitude: 75.782, fuel_level: 0.88 })
+          });
+          data = await res.json();
+          return { ok: data.ok === true, data, elapsed: performance.now() - t0 };
+
+        case 'incidents-get':
+          res = await fetch('/api/incidents?status=Open');
+          data = await res.json();
+          if (data.data && data.data.length > 0) createdIncidentId = data.data[0].id;
+          return { ok: data.ok && Array.isArray(data.data), data, elapsed: performance.now() - t0 };
+
+        case 'incident-post':
+          res = await fetch('/api/incidents', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              raw_sos_text: 'Urgent: Water entered ground floor, cardiac elderly patient isolated near Sodala',
+              latitude: 26.9080,
+              longitude: 75.7680,
+              origin_channel: 'WEB_SOS'
+            })
+          });
+          data = await res.json();
+          if (data.incident?.id) createdIncidentId = data.incident.id;
+          return { ok: data.ok === true && !!data.incident, data, elapsed: performance.now() - t0 };
+
+        case 'incident-id':
+          res = await fetch(`/api/incidents/${createdIncidentId}`);
+          data = await res.json();
+          return { ok: data.ok && data.data?.id === createdIncidentId, data, elapsed: performance.now() - t0 };
+
+        case 'incident-status':
+          res = await fetch(`/api/incidents/${createdIncidentId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'On_Scene', updated_by: 'CONSOLE_TEST' })
+          });
+          data = await res.json();
+          return { ok: data.ok === true, data, elapsed: performance.now() - t0 };
+
+        case 'equity':
+          res = await fetch('/api/equity');
+          data = await res.json();
+          return { ok: data.ok && data.data?.type === 'FeatureCollection', data, elapsed: performance.now() - t0 };
+
+        case 'neglected':
+          res = await fetch('/api/equity/neglected?limit=5');
+          data = await res.json();
+          return { ok: data.ok && Array.isArray(data.data), data, elapsed: performance.now() - t0 };
+
+        case 'degrade':
+          res = await fetch('/api/simulate/degrade', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ asset_id: targetAssetId, reason: 'SIMULATED_ENGINE_FAILURE' })
+          });
+          data = await res.json();
+          return { ok: data.ok === true, data, elapsed: performance.now() - t0 };
+
+        case 'sync':
+          const testUUID = 'e0000001-0000-0000-0000-' + String(Math.floor(Math.random() * 1000000000000)).padStart(12, '0');
+          res = await fetch('/api/sync/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              client_device_id: 'FIELD_UNIT_JAIPUR_01',
+              synced_at: new Date().toISOString(),
+              queued_incidents: [{
+                id: testUUID,
+                raw_sos_text: 'Field report from deadzone: isolated family on high school roof',
+                primary_need: 'Water_Evacuation',
+                secondary_needs: ['food_supply'],
+                required_capability_tags: ['water_rescue', 'evac'],
+                latitude: 26.9150,
+                longitude: 75.7650,
+                people_count: 4,
+                client_recorded_at: new Date().toISOString()
+              }],
+              asset_telemetry: []
+            })
+          });
+          data = await res.json();
+          return { ok: data.ok === true && data.summary?.ingested >= 0, data, elapsed: performance.now() - t0 };
+
+        default:
+          return { ok: false, data: null, elapsed: 0 };
+      }
+    }
+
+    async function runTest(key) {
+      const badge = document.getElementById('badge-' + key);
+      const timing = document.getElementById('time-' + key);
+
+      badge.className = 'badge badge-running';
+      badge.textContent = 'Running';
+
+      try {
+        const result = await executeApi(key);
+        testResults[key] = result;
+
+        if (result.ok) {
+          badge.className = 'badge badge-pass';
+          badge.textContent = 'PASS';
+        } else {
+          badge.className = 'badge badge-fail';
+          badge.textContent = 'FAIL';
+        }
+
+        timing.textContent = Math.round(result.elapsed) + 'ms';
+        log(result.data);
+      } catch (err) {
+        testResults[key] = { ok: false, error: err.message, elapsed: 0 };
+        badge.className = 'badge badge-fail';
+        badge.textContent = 'ERROR';
+        timing.textContent = 'ERR';
+        log({ error: err.message });
+      }
+
+      updateSummary();
+    }
+
+    async function runAllTests() {
+      document.getElementById('test-summary').textContent = 'Executing test suite...';
+      for (const key of TEST_KEYS) {
+        await runTest(key);
+        // Micro delay for visual smoothness
+        await new Promise(r => setTimeout(r, 50));
+      }
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const ran = Object.keys(testResults).length;
+      const passed = Object.values(testResults).filter(r => r.ok).length;
+      const failed = ran - passed;
+      const passRate = ran === 0 ? 0 : Math.round((passed / ran) * 100);
+
+      const latencies = Object.values(testResults).map(r => r.elapsed).filter(Boolean);
+      const avgLat = latencies.length ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : 0;
+
+      document.getElementById('metric-tests').textContent = `${ran} / ${TEST_KEYS.length}`;
+      document.getElementById('metric-pass-rate').textContent = `${passRate}%`;
+      document.getElementById('metric-latency').textContent = `${avgLat}ms`;
+
+      const summary = document.getElementById('test-summary');
+      summary.setAttribute('data-passed', passed);
+      summary.setAttribute('data-failed', failed);
+      summary.setAttribute('data-total', TEST_KEYS.length);
+
+      if (ran === TEST_KEYS.length && failed === 0) {
+        summary.innerHTML = `<span style="color: var(--success);">🎉 ALL ${passed} TESTS PASSED — DOM & API HEALTHY</span>`;
+      } else if (ran > 0) {
+        summary.innerHTML = `<span>Completed: ${passed} passed, ${failed} failed</span>`;
+      }
+    }
+
+    // Auto-run if requested in query param (?autorun=true)
+    if (new URLSearchParams(window.location.search).get('autorun') === 'true') {
+      window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(runAllTests, 300);
+      });
+    }
+  </script>
+</body>
+</html>
