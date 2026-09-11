@@ -12,9 +12,10 @@ import {
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
 import { Incident } from '../types/disaster';
+import { getAgencyConfig } from '../utils/agencyConfig';
 
 export const IncidentQueue: React.FC = () => {
-  const { incidents, selectedIncidentId, selectIncident } = useDisasterStore();
+  const { incidents, selectedIncidentId, selectIncident, lastSyncTime } = useDisasterStore();
   const [filter, setFilter] = useState<'ALL' | 'CRITICAL' | 'FLOOD' | 'LANDSLIDE'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,7 +38,7 @@ export const IncidentQueue: React.FC = () => {
   const getEventIcon = (eventType: Incident['eventType']) => {
     switch (eventType) {
       case 'FLOOD':
-        return <Waves className="h-3.5 w-3.5 text-blue-400" />;
+        return <Waves className="h-3.5 w-3.5 text-sky-400" />;
       case 'LANDSLIDE':
         return <Mountain className="h-3.5 w-3.5 text-amber-400" />;
       case 'COLLAPSE':
@@ -48,7 +49,7 @@ export const IncidentQueue: React.FC = () => {
   };
 
   return (
-    <aside className="w-full lg:w-[350px] bg-surface-panel border-r border-border-subtle flex flex-col h-[calc(100vh-57px)] select-none">
+    <aside className="w-full lg:w-[360px] bg-surface-panel border-r border-border-subtle flex flex-col h-full min-h-0 select-none shrink-0">
       {/* Search and Quick Filters */}
       <div className="p-3 border-b border-border-subtle bg-surface-panel/90 backdrop-blur sticky top-0 z-10 space-y-2">
         <div className="relative">
@@ -113,65 +114,56 @@ export const IncidentQueue: React.FC = () => {
           const isSelected = selectedIncidentId === incident.id;
           const isCritical = incident.assessment.priorityScore >= 80;
 
-          return (
-            <div
-              key={incident.id}
-              onClick={() => selectIncident(incident.id)}
-              className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                isSelected
-                  ? 'bg-surface-card border-indigo-500 shadow-md ring-1 ring-indigo-500/40'
-                  : 'bg-surface-panel hover:bg-surface-card border-border-subtle hover:border-border-strong'
-              }`}
-            >
-              {/* Header: Code, Priority, and Status Pill */}
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-xs font-bold text-content-primary">
-                    {incident.incidentCode}
-                  </span>
-                  <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.2 rounded bg-surface-canvas text-content-muted border border-border-subtle font-mono">
-                    {getEventIcon(incident.eventType)}
-                    {incident.eventType}
-                  </span>
+            const reqAgency = incident.eventType === 'FLOOD' ? 'NDRF' : incident.eventType === 'LANDSLIDE' || incident.eventType === 'COLLAPSE' ? 'SDRF' : 'EMS';
+            const agencyCfg = getAgencyConfig(reqAgency);
+
+            return (
+              <div
+                key={incident.id}
+                onClick={() => selectIncident(incident.id)}
+                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                  isSelected
+                    ? 'bg-surface-card border-sky-500 shadow-md ring-1 ring-sky-500/40'
+                    : 'bg-surface-panel hover:bg-surface-card border-border-subtle hover:border-border-strong'
+                }`}
+              >
+                {/* Header: Code, Priority, and Status Pill */}
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs font-bold text-content-primary">
+                      {incident.incidentCode}
+                    </span>
+                    <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.2 rounded bg-surface-canvas text-content-muted border border-border-subtle font-mono">
+                      {getEventIcon(incident.eventType)}
+                      {incident.eventType}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`font-mono text-xs font-extrabold px-1.5 py-0.5 rounded ${
+                        isCritical
+                          ? 'bg-status-critical/20 text-status-critical border border-status-critical/40'
+                          : 'bg-status-high/20 text-status-high border border-status-high/40'
+                      }`}
+                    >
+                      {incident.assessment.priorityScore}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`font-mono text-xs font-extrabold px-1.5 py-0.5 rounded ${
-                      isCritical
-                        ? 'bg-status-critical/20 text-status-critical border border-status-critical/40'
-                        : 'bg-status-high/20 text-status-high border border-status-high/40'
-                    }`}
-                  >
-                    {incident.assessment.priorityScore}
+                {/* Title & Location */}
+                <h4 className="text-xs font-bold text-content-primary mb-1 line-clamp-1">
+                  {incident.zoneName}
+                </h4>
+
+                {/* Primary Agency Requirement Badge */}
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${agencyCfg.chipClass} font-mono flex items-center gap-1 border`}>
+                    <img src={agencyCfg.icon} alt={agencyCfg.shortName} className="h-3 w-3 rounded-sm object-contain" />
+                    <span>Req: {agencyCfg.shortName} {incident.eventType === 'FLOOD' ? 'Water Rescue' : incident.eventType === 'MEDICAL_SURGE' ? 'Trauma Team' : 'Alpine Squad'}</span>
                   </span>
                 </div>
-              </div>
-
-              {/* Title & Location */}
-              <h4 className="text-xs font-bold text-content-primary mb-1 line-clamp-1">
-                {incident.zoneName}
-              </h4>
-
-              {/* Primary Agency Requirement Badge */}
-              <div className="flex items-center gap-1.5 mb-1.5">
-                {incident.eventType === 'FLOOD' ? (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-950/40 border border-orange-700/50 text-orange-300 font-mono flex items-center gap-1">
-                    <img src="/assets/agencies/ndrf-icon.png" alt="NDRF" className="h-3 w-3 rounded-sm object-contain" />
-                    Req: NDRF Water Rescue
-                  </span>
-                ) : incident.eventType === 'LANDSLIDE' || incident.eventType === 'COLLAPSE' ? (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-950/40 border border-blue-700/50 text-blue-300 font-mono flex items-center gap-1">
-                    <img src="/assets/agencies/sdrf-icon.png" alt="SDRF" className="h-3 w-3 rounded-sm object-contain" />
-                    Req: SDRF Mountain Squad
-                  </span>
-                ) : (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-950/40 border border-red-700/50 text-red-300 font-mono flex items-center gap-1">
-                    <img src="/assets/agencies/ems-icon.png" alt="EMS" className="h-3 w-3 rounded-sm object-contain" />
-                    Req: EMS Advanced Trauma
-                  </span>
-                )}
-              </div>
 
               {/* Casualties summary */}
               <div className="flex items-center gap-3 text-[11px] text-content-secondary font-mono mb-2">
@@ -224,10 +216,10 @@ export const IncidentQueue: React.FC = () => {
       </div>
 
       {/* Queue Footer: Queue count & time */}
-      <div className="p-2 border-t border-border-subtle bg-surface-canvas text-center text-[11px] text-content-muted font-mono flex items-center justify-between px-3">
+      <div className="p-2.5 border-t border-border-subtle bg-surface-canvas text-center text-[11px] text-content-muted font-mono flex items-center justify-between px-3">
         <span>{filteredIncidents.length} active sectors</span>
-        <span className="flex items-center gap-1">
-          <Clock className="h-3 w-3" /> Updated T+04:15
+        <span className="flex items-center gap-1 text-content-secondary">
+          <Clock className="h-3 w-3 text-sky-400" /> {lastSyncTime ? `Synced ${lastSyncTime}` : 'Live Telemetry'}
         </span>
       </div>
     </aside>

@@ -3,6 +3,7 @@ import L from 'leaflet';
 import { cellToBoundary } from 'h3-js';
 import { Layers, Shield, Radio, Navigation } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
+import { getAgencyConfig } from '../utils/agencyConfig';
 
 export const TacticalMap: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -90,7 +91,7 @@ export const TacticalMap: React.FC = () => {
               ? 'bg-status-critical border-2 border-white'
               : 'bg-status-high border-2 border-white'
           } flex items-center justify-center shadow-lg ${
-            isSelected ? 'ring-4 ring-cyan-400 scale-125' : ''
+            isSelected ? 'ring-4 ring-sky-400 scale-125' : ''
           }">
             <span class="text-[9px] font-mono font-bold text-white">${incident.incidentCode.split('-')[1]}</span>
           </div>
@@ -147,22 +148,9 @@ export const TacticalMap: React.FC = () => {
 
     assets.forEach((asset) => {
       const isDispatched = asset.status === 'EN_ROUTE' || asset.status === 'ON_SITE';
-      let agencyIconSrc = '/assets/agencies/ndrf-icon.png';
-      let ringColor = '#F97316';
-
-      if (asset.agency.includes('SDRF')) {
-        agencyIconSrc = '/assets/agencies/sdrf-icon.png';
-        ringColor = '#0284C7';
-      } else if (asset.agency.includes('Police')) {
-        agencyIconSrc = '/assets/agencies/police-icon.png';
-        ringColor = '#3B82F6';
-      } else if (asset.agency.includes('Medical') || asset.agency.includes('EMS')) {
-        agencyIconSrc = '/assets/agencies/ems-icon.png';
-        ringColor = '#EF4444';
-      } else if (asset.agency.includes('ITBP') || asset.agency.includes('Army')) {
-        agencyIconSrc = '/assets/agencies/ngo-icon.png';
-        ringColor = '#10B981';
-      }
+      const agencyCfg = getAgencyConfig(asset.agency);
+      const agencyIconSrc = agencyCfg.icon;
+      const ringColor = agencyCfg.hex;
 
       const assetHtml = `
         <div class="relative flex items-center justify-center cursor-pointer group">
@@ -191,7 +179,7 @@ export const TacticalMap: React.FC = () => {
               <img src="${agencyIconSrc}" class="h-4 w-4 rounded-sm object-contain" />
               <span class="font-mono text-xs font-bold text-white">${asset.assetCode}</span>
             </div>
-            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-900/40 text-blue-300 font-mono">${asset.agency}</span>
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${agencyCfg.chipClass} font-mono">${agencyCfg.shortName}</span>
           </div>
           <p class="text-xs font-bold text-gray-200">${asset.name}</p>
           <div class="text-[11px] text-gray-400 font-mono space-y-0.5">
@@ -228,9 +216,9 @@ export const TacticalMap: React.FC = () => {
           : '#F59E0B';
 
         const polygon = L.polygon(latLngs, {
-          color: isSelected ? '#06B6D4' : color,
+          color: isSelected ? '#38BDF8' : color,
           weight: isSelected ? 3 : 1.5,
-          fillColor: color,
+          fillColor: isSelected ? '#0284C7' : color,
           fillOpacity: isSelected ? 0.35 : 0.2,
         });
 
@@ -324,7 +312,7 @@ export const TacticalMap: React.FC = () => {
   }, [selectedIncidentId, incidents]);
 
   return (
-    <main className="flex-1 relative h-[calc(100vh-57px)] bg-surface-canvas overflow-hidden">
+    <main className="flex-1 relative h-full w-full min-h-0 bg-surface-canvas overflow-hidden">
       {/* Leaflet Map Canvas */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 

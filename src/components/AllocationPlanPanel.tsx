@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useDisasterStore } from '../stores/useDisasterStore';
+import { getAgencyConfig } from '../utils/agencyConfig';
 
 export const AllocationPlanPanel: React.FC = () => {
   const {
@@ -39,7 +40,7 @@ export const AllocationPlanPanel: React.FC = () => {
   };
 
   return (
-    <aside className="w-full lg:w-[380px] bg-surface-panel border-l border-border-subtle flex flex-col h-[calc(100vh-57px)] select-none">
+    <aside className="w-full lg:w-[380px] bg-surface-panel border-l border-border-subtle flex flex-col h-full min-h-0 select-none shrink-0">
       {/* Panel Header */}
       <div className="p-3 border-b border-border-subtle bg-surface-panel/90 backdrop-blur sticky top-0 z-10">
         <div className="flex items-center justify-between gap-2">
@@ -142,13 +143,14 @@ export const AllocationPlanPanel: React.FC = () => {
 
               {activePlan.assignments.map((asg) => {
                 const isExpanded = expandedReasoningId === asg.id;
+                const agencyCfg = getAgencyConfig(asg.agency);
 
                 return (
                   <div
                     key={asg.id}
                     className={`p-3 rounded-lg border transition-all ${
                       asg.isEquityForced
-                        ? 'bg-purple-950/20 border-status-forgotten/50'
+                        ? 'bg-status-forgotten/10 border-status-forgotten/40'
                         : 'bg-surface-card border-border-subtle hover:border-border-strong'
                     }`}
                   >
@@ -156,34 +158,24 @@ export const AllocationPlanPanel: React.FC = () => {
                     <div className="flex items-center justify-between gap-2 mb-1.5">
                       <div className="flex items-center gap-2">
                         <img
-                          src={
-                            asg.agency.includes('SDRF')
-                              ? '/assets/agencies/sdrf-icon.png'
-                              : asg.agency.includes('Police')
-                              ? '/assets/agencies/police-icon.png'
-                              : asg.agency.includes('Medical') || asg.agency.includes('EMS')
-                              ? '/assets/agencies/ems-icon.png'
-                              : asg.agency.includes('ITBP') || asg.agency.includes('Army')
-                              ? '/assets/agencies/ngo-icon.png'
-                              : '/assets/agencies/ndrf-icon.png'
-                          }
-                          alt={asg.agency}
+                          src={agencyCfg.icon}
+                          alt={agencyCfg.shortName}
                           className="h-5 w-5 rounded object-contain border border-border-strong bg-black/40"
                         />
                         <span className="text-xs font-mono font-bold text-content-primary">
                           {asg.assetCode}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-canvas text-blue-300 font-mono border border-border-subtle">
-                          {asg.agency}
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono border ${agencyCfg.chipClass}`}>
+                          {agencyCfg.shortName}
                         </span>
                         {asg.isEquityForced && (
-                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-status-forgotten/30 text-purple-300 font-mono font-bold border border-status-forgotten/40">
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-status-forgotten/20 text-status-forgotten font-mono font-bold border border-status-forgotten/40">
                             EQUITY FORCED
                           </span>
                         )}
                       </div>
 
-                      <span className="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1">
+                      <span className="text-xs font-mono font-bold text-status-safe flex items-center gap-1">
                         <Clock className="h-3 w-3" /> {asg.travelMinutes} min
                       </span>
                     </div>

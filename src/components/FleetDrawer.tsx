@@ -11,6 +11,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
+import { getAgencyConfig, AGENCY_CONFIG } from '../utils/agencyConfig';
 
 export const FleetDrawer: React.FC = () => {
   const { assets, isFleetDrawerOpen, setFleetDrawerOpen } = useDisasterStore();
@@ -20,11 +21,11 @@ export const FleetDrawer: React.FC = () => {
 
   const agencyFilterOptions = [
     { id: 'ALL', label: 'All Fleet', icon: null },
-    { id: 'NDRF', label: 'NDRF', icon: '/assets/agencies/ndrf-icon.png' },
-    { id: 'SDRF', label: 'SDRF', icon: '/assets/agencies/sdrf-icon.png' },
-    { id: 'POLICE', label: 'Police', icon: '/assets/agencies/police-icon.png' },
-    { id: 'EMS', label: 'EMS', icon: '/assets/agencies/ems-icon.png' },
-    { id: 'ITBP', label: 'ITBP/Army', icon: '/assets/agencies/ngo-icon.png' },
+    { id: 'NDRF', label: 'NDRF', icon: AGENCY_CONFIG.NDRF.icon },
+    { id: 'SDRF', label: 'SDRF', icon: AGENCY_CONFIG.SDRF.icon },
+    { id: 'POLICE', label: 'Police', icon: AGENCY_CONFIG.POLICE.icon },
+    { id: 'EMS', label: 'EMS', icon: AGENCY_CONFIG.EMS.icon },
+    { id: 'ITBP', label: 'ITBP', icon: AGENCY_CONFIG.ITBP.icon },
   ];
 
   const filteredAssets =
@@ -38,13 +39,13 @@ export const FleetDrawer: React.FC = () => {
         {/* Header */}
         <div className="p-4 border-b border-border-subtle flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+            <div className="h-8 w-8 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400">
               <Truck className="h-4 w-4" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-content-primary flex items-center gap-2">
                 Multi-Agency Fleet Telemetry
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-card border border-border-strong text-indigo-300">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-card border border-border-strong text-sky-400">
                   {assets.length} Units
                 </span>
               </h2>
@@ -69,7 +70,7 @@ export const FleetDrawer: React.FC = () => {
               onClick={() => setSelectedAgency(tab.id)}
               className={`px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 shrink-0 transition-colors ${
                 selectedAgency === tab.id
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-sky-600 text-white shadow-sm'
                   : 'bg-surface-card hover:bg-surface-hover text-content-secondary border border-border-subtle'
               }`}
             >
@@ -84,11 +85,7 @@ export const FleetDrawer: React.FC = () => {
         {/* Fleet Asset Cards */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {filteredAssets.map((asset) => {
-            let agencyIcon = '/assets/agencies/ndrf-icon.png';
-            if (asset.agency.includes('SDRF')) agencyIcon = '/assets/agencies/sdrf-icon.png';
-            else if (asset.agency.includes('Police')) agencyIcon = '/assets/agencies/police-icon.png';
-            else if (asset.agency.includes('Medical') || asset.agency.includes('EMS')) agencyIcon = '/assets/agencies/ems-icon.png';
-            else if (asset.agency.includes('ITBP') || asset.agency.includes('Army')) agencyIcon = '/assets/agencies/ngo-icon.png';
+            const agencyCfg = getAgencyConfig(asset.agency);
 
             return (
               <div
@@ -98,7 +95,7 @@ export const FleetDrawer: React.FC = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
                     <img
-                      src={agencyIcon}
+                      src={agencyCfg.icon}
                       alt={asset.agency}
                       className="h-7 w-7 rounded-md object-contain border border-border-strong bg-black/40"
                     />
@@ -112,7 +109,7 @@ export const FleetDrawer: React.FC = () => {
                         </span>
                       </div>
                       <p className="text-[11px] text-content-secondary flex items-center gap-1">
-                        <Shield className="h-3 w-3 text-indigo-400" />
+                        <Shield className="h-3 w-3 text-sky-400" />
                         {asset.agency}
                       </p>
                     </div>
@@ -156,7 +153,7 @@ export const FleetDrawer: React.FC = () => {
                 {/* Station & Capabilities */}
                 <div className="flex items-center justify-between text-[11px] text-content-muted">
                   <span className="flex items-center gap-1 truncate max-w-[200px]">
-                    <MapPin className="h-3 w-3 shrink-0 text-indigo-400" />
+                    <MapPin className="h-3 w-3 shrink-0 text-sky-400" />
                     {asset.baseStation}
                   </span>
                   <div className="flex items-center gap-1">

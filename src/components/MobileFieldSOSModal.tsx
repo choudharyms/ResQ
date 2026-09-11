@@ -155,7 +155,7 @@ export const MobileFieldSOSModal: React.FC = () => {
         {/* Header */}
         <div className="p-4 border-b border-border-subtle flex items-center justify-between gap-3 bg-surface-panel/90">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+            <div className="h-8 w-8 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
@@ -230,7 +230,7 @@ export const MobileFieldSOSModal: React.FC = () => {
           <div className="p-3 rounded-lg bg-surface-card border border-border-subtle space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-content-primary font-mono flex items-center gap-1">
-                <Mic className="h-3.5 w-3.5 text-indigo-400" /> Web Voice Audio SOS
+                <Mic className="h-3.5 w-3.5 text-sky-400" /> Web Voice Audio SOS
               </span>
               <button
                 type="button"
@@ -238,7 +238,7 @@ export const MobileFieldSOSModal: React.FC = () => {
                 className={`px-2.5 py-1 rounded text-[11px] font-mono font-bold flex items-center gap-1 transition-all ${
                   isRecording
                     ? 'bg-status-critical text-white animate-pulse'
-                    : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                    : 'bg-sky-600 hover:bg-sky-500 text-white'
                 }`}
               >
                 {isRecording ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
@@ -262,7 +262,7 @@ export const MobileFieldSOSModal: React.FC = () => {
             )}
 
             {voiceTranscript && (
-              <p className="text-[11px] font-mono text-indigo-300 bg-surface-canvas p-2 rounded border border-border-subtle leading-relaxed">
+              <p className="text-[11px] font-mono text-sky-300 bg-surface-canvas p-2 rounded border border-border-subtle leading-relaxed">
                 {voiceTranscript}
               </p>
             )}
@@ -287,7 +287,7 @@ export const MobileFieldSOSModal: React.FC = () => {
 
           {/* Raw SOS Text → Gemini Pipeline */}
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-indigo-400 font-mono flex items-center gap-1">
+            <label className="text-[11px] font-bold text-sky-400 font-mono flex items-center gap-1">
               <Sparkles className="h-3 w-3" /> Raw SOS Text (AI Triage via Gemini)
             </label>
             <textarea
@@ -295,7 +295,7 @@ export const MobileFieldSOSModal: React.FC = () => {
               value={rawSosText}
               onChange={(e) => setRawSosText(e.target.value)}
               placeholder="Paste or type the raw distress message — Gemini will extract need, severity and triage tier automatically…"
-              className="w-full bg-surface-canvas border border-indigo-700/40 rounded-md p-2 text-xs text-content-primary focus:border-indigo-500 focus:outline-none placeholder:text-content-muted font-mono"
+              className="w-full bg-surface-canvas border border-sky-700/40 rounded-md p-2 text-xs text-content-primary focus:border-sky-500 focus:outline-none placeholder:text-content-muted font-mono"
             />
             <p className="text-[10px] text-content-muted">
               If left blank, the form fields below will construct the SOS payload.
@@ -392,7 +392,7 @@ export const MobileFieldSOSModal: React.FC = () => {
           {/* Submit */}
           <button
             type="submit"
-            className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs font-mono flex items-center justify-center gap-2 shadow-lg transition-all"
+            className="w-full py-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs font-mono flex items-center justify-center gap-2 shadow-lg transition-all"
           >
             <Send className="h-4 w-4" />
             <span>{isDegradedMode ? 'Buffer Report in IndexedDB (Offline)' : 'Submit SOS to Information Fusion Engine'}</span>

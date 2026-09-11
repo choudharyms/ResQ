@@ -107,14 +107,14 @@ export const JudgeDemoTour: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-3xl bg-surface-panel/95 backdrop-blur-md border-2 border-indigo-500/50 shadow-2xl rounded-xl p-4 text-content-primary ring-4 ring-indigo-500/20 transition-all duration-300">
+    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-3xl bg-surface-panel/95 backdrop-blur-md border-2 border-sky-500/50 shadow-2xl rounded-xl p-4 text-content-primary ring-4 ring-sky-500/20 transition-all duration-300">
       {/* Header bar */}
       <div className="flex items-center justify-between gap-3 pb-2.5 border-b border-border-subtle">
         <div className="flex items-center gap-2">
-          <span className="p-1 rounded bg-indigo-500/20 text-indigo-400">
+          <span className="p-1 rounded bg-sky-500/20 text-sky-400">
             <Sparkles className="h-4 w-4 animate-spin" />
           </span>
-          <span className="text-xs font-bold uppercase tracking-wider font-mono text-indigo-400">
+          <span className="text-xs font-bold uppercase tracking-wider font-mono text-sky-400">
             Judge Guided Walkthrough Mode
           </span>
           <span className="text-[11px] px-2 py-0.5 rounded-full bg-surface-card border border-border-strong text-content-secondary font-mono">
@@ -130,9 +130,9 @@ export const JudgeDemoTour: React.FC = () => {
               onClick={() => setTourStep(step)}
               className={`h-2.5 rounded-full transition-all ${
                 tourStep === step
-                  ? 'w-7 bg-indigo-500 shadow-sm shadow-indigo-500/50'
+                  ? 'w-7 bg-sky-500 shadow-sm shadow-sky-500/50'
                   : tourStep > step
-                  ? 'w-2.5 bg-indigo-700 hover:bg-indigo-600'
+                  ? 'w-2.5 bg-sky-700 hover:bg-sky-600'
                   : 'w-2.5 bg-surface-card border border-border-strong'
               }`}
               title={`Jump to Act ${step}`}
@@ -168,9 +168,9 @@ export const JudgeDemoTour: React.FC = () => {
         {/* Action Button */}
         <button
           onClick={currentAct.onAction}
-          className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/60 text-xs font-semibold text-indigo-200 transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 shrink-0"
+          className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-sky-600/30 hover:bg-sky-600/50 border border-sky-500/60 text-xs font-semibold text-sky-200 transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 shrink-0"
         >
-          <CheckCircle2 className="h-3.5 w-3.5 text-indigo-400" />
+          <CheckCircle2 className="h-3.5 w-3.5 text-sky-400" />
           <span>{currentAct.actionLabel}</span>
         </button>
       </div>
@@ -187,7 +187,7 @@ export const JudgeDemoTour: React.FC = () => {
 
         <button
           onClick={handleNext}
-          className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold flex items-center gap-1.5 shadow-sm transition-all"
+          className="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold flex items-center gap-1.5 shadow-sm transition-all"
         >
           <span>{tourStep === 4 ? 'Complete Walkthrough' : 'Next Step'}</span>
           <ChevronRight className="h-3.5 w-3.5" />
