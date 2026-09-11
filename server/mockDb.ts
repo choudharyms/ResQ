@@ -318,6 +318,24 @@ class MockDatabase {
       return { rows: [], rowCount: 0 };
     }
 
+    // Demo reset queries
+    if (s.includes('DELETE FROM ALLOCATIONS')) {
+      this.allocations = [];
+      return { rows: [], rowCount: 0 };
+    }
+    if (s.includes('DELETE FROM INCIDENTS')) {
+      this.resetToSeed();
+      return { rows: [], rowCount: 0 };
+    }
+    if (s.includes('UPDATE ASSETS') && (s.includes("STATUS = 'AVAILABLE'") || s.includes("STATUS = $1"))) {
+      this.assets.forEach(a => {
+        a.status = 'Available';
+        a.fuel_level = 1.0;
+        a.updated_at = new Date().toISOString();
+      });
+      return { rows: [], rowCount: this.assets.length };
+    }
+
     // Refresh equity
     if (s.includes('FN_REFRESH_EQUITY')) {
       return { rows: [] as T[], rowCount: 1 };
