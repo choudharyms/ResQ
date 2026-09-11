@@ -11,6 +11,7 @@ import {
   Truck,
   Volume2,
   VolumeX,
+  RefreshCw,
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
 
@@ -30,6 +31,10 @@ export const Header: React.FC = () => {
     toggleMute,
     tourStep,
     setTourStep,
+    isApiConnected,
+    isSyncing,
+    lastSyncTime,
+    hydrateFromBackend,
   } = useDisasterStore();
 
   const activeCount = incidents.length;
@@ -221,6 +226,41 @@ export const Header: React.FC = () => {
           title={isMuted ? 'Unmute tactical audio' : 'Mute tactical audio'}
         >
           {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+        </button>
+
+        {/* Backend API Connection Status Badge */}
+        <button
+          onClick={() => hydrateFromBackend()}
+          disabled={isSyncing}
+          className={`px-2 py-1.5 rounded-md text-xs font-mono flex items-center gap-1.5 transition-all border ${
+            isApiConnected
+              ? 'bg-emerald-950/30 border-emerald-700/50 text-emerald-400 hover:bg-emerald-950/60'
+              : 'bg-amber-950/30 border-amber-700/50 text-amber-400 hover:bg-amber-950/60'
+          }`}
+          title={
+            isApiConnected
+              ? `Express REST API :3001 Active • Synced at ${lastSyncTime || 'now'} (Click to refresh)`
+              : 'Standalone Mathematical Simulation Active (Click to reconnect to API :3001)'
+          }
+        >
+          <span className="relative flex h-2 w-2">
+            {isApiConnected && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            )}
+            <span
+              className={`relative inline-flex rounded-full h-2 w-2 ${
+                isApiConnected ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}
+            />
+          </span>
+          <span className="hidden xl:inline font-bold">
+            {isSyncing ? 'Syncing...' : isApiConnected ? 'API :3001' : 'Sim Engine'}
+          </span>
+          <RefreshCw
+            className={`h-3 w-3 text-content-muted hover:text-content-primary ${
+              isSyncing ? 'animate-spin text-emerald-400' : ''
+            }`}
+          />
         </button>
 
         {/* Offline / Degraded Toggle */}

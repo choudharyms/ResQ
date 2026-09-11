@@ -23,6 +23,13 @@ import {
   playEmergencySiren,
   playEquityRadarPulse,
 } from '../utils/soundFx';
+import { apiClient } from '../services/apiClient';
+import {
+  queueOfflineSos,
+  getUnsyncedSosReports,
+  markSosReportsSynced,
+  countUnsyncedSosReports,
+} from '../services/offlineDb';
 
 interface DisasterState {
   incidents: Incident[];
@@ -41,7 +48,14 @@ interface DisasterState {
   isMuted: boolean;
   tourStep: number | null; // 1: Ingestion, 2: Allocation, 3: Road Cut Diff, 4: Equity
 
+  // Backend Integration State
+  isApiConnected: boolean;
+  backendMode: 'LIVE_API' | 'LOCAL_SIMULATION';
+  isSyncing: boolean;
+  lastSyncTime: string | null;
+
   // Actions
+  hydrateFromBackend: () => Promise<void>;
   selectIncident: (id: string | null) => void;
   runAllocation: () => void;
   approveCurrentPlan: () => void;
@@ -53,12 +67,12 @@ interface DisasterState {
     casualties: Incident['casualties'];
     location: Incident['location'];
     accessNote: string;
-  }) => void;
+  }) => Promise<void>;
   setDiffModalOpen: (open: boolean) => void;
   setEquityDrawerOpen: (open: boolean) => void;
   setFieldFormOpen: (open: boolean) => void;
   setFleetDrawerOpen: (open: boolean) => void;
-  toggleDegradedMode: () => void;
+  toggleDegradedMode: () => Promise<void>;
   toggleMute: () => void;
   setTourStep: (step: number | null) => void;
 }
@@ -80,6 +94,76 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
   isMuted: false,
   tourStep: null,
 
+  // Backend Integration Initial State
+  isApiConnected: false,
+  backendMode: 'LOCAL_SIMULATION',
+  isSyncing: false,
+  lastSyncTime: null,
+
+  hydrateFromBackend: async () => {
+    set({ isSyncing: true });
+    try {
+      // Check API health
+      const health = await apiClient.checkHealth();
+      if (!health || !health.ok) {
+        console.warn('[ResQ] Express API unreachable, continuing in deterministic local mode');
+        set({
+          isApiConnected: false,
+          backendMode: 'LOCAL_SIMULATION',
+          isSyncing: false,
+        });
+        get().runAllocation();
+        return;
+      }
+
+      // Fetch live incidents, assets, and equity zones concurrently
+      const [backendIncidents, backendAssets, backendEquity] = await Promise.all([
+        apiClient.fetchIncidents().catch((err) => {
+          console.warn('[ResQ] Incidents fetch fallback:', err);
+          return null;
+        }),
+        apiClient.fetchAssets().catch((err) => {
+          console.warn('[ResQ] Assets fetch fallback:', err);
+          return null;
+        }),
+        apiClient.fetchEquityZones().catch((err) => {
+          console.warn('[ResQ] Equity fetch fallback:', err);
+          return null;
+        }),
+      ]);
+
+      const currentIncidents = backendIncidents && backendIncidents.length > 0 ? backendIncidents : get().incidents;
+      const currentAssets = backendAssets && backendAssets.length > 0 ? backendAssets : get().assets;
+      const currentEquity = backendEquity && backendEquity.length > 0 ? backendEquity : get().equityZones;
+
+      // Check Dexie for pending offline records
+      const pendingCount = await countUnsyncedSosReports().catch(() => 0);
+
+      set({
+        incidents: currentIncidents,
+        selectedIncidentId: currentIncidents[0]?.id || null,
+        assets: currentAssets,
+        equityZones: currentEquity,
+        isApiConnected: true,
+        backendMode: 'LIVE_API',
+        isSyncing: false,
+        lastSyncTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        offlineQueueCount: pendingCount,
+      });
+
+      // Run deterministic allocation over active state
+      get().runAllocation();
+    } catch (err) {
+      console.error('[ResQ] Hydration failed, falling back to local simulation:', err);
+      set({
+        isApiConnected: false,
+        backendMode: 'LOCAL_SIMULATION',
+        isSyncing: false,
+      });
+      get().runAllocation();
+    }
+  },
+
   selectIncident: (id) => set({ selectedIncidentId: id }),
 
   runAllocation: () => {
@@ -95,7 +179,7 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
   },
 
   approveCurrentPlan: () => {
-    const { activePlan, assets, isMuted } = get();
+    const { activePlan, assets, isMuted, isApiConnected } = get();
     if (!activePlan) return;
 
     // Trigger tactical sound
@@ -105,6 +189,12 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
     const assignedAssetIds = new Set(activePlan.assignments.map((a) => a.assetId));
     const updatedAssets = assets.map((asset) => {
       if (assignedAssetIds.has(asset.id)) {
+        // Asynchronously notify backend if online
+        if (isApiConnected) {
+          apiClient.updateAssetStatus(asset.id, 'Assigned', 'COMMANDER_APPROVED_PLAN').catch((e) =>
+            console.warn('[ResQ] Failed to push asset status update:', e)
+          );
+        }
         return { ...asset, status: 'EN_ROUTE' as const };
       }
       return asset;
@@ -123,7 +213,7 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
   },
 
   toggleHighwayCut: () => {
-    const { isHighwayCut, incidents, assets, activePlan, equityZones, isMuted } = get();
+    const { isHighwayCut, incidents, assets, activePlan, equityZones, isMuted, isApiConnected } = get();
     const nextCutState = !isHighwayCut;
 
     // Sound alert on road cut mutation
@@ -131,6 +221,13 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
       playEmergencySiren(isMuted);
     } else {
       playDispatchChime(isMuted);
+    }
+
+    // Notify backend if connected
+    if (isApiConnected) {
+      apiClient.simulateBridgeCut(undefined, nextCutState ? 'NH-07_WASHOUT' : 'NH-07_CLEARED').catch((e) =>
+        console.warn('[ResQ] Bridge cut sync error:', e)
+      );
     }
 
     // Re-run allocator with or without highway cut penalty
@@ -233,13 +330,8 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
     });
   },
 
-  addIncident: (data) => {
-    const { isDegradedMode, isMuted } = get();
-
-    if (isDegradedMode) {
-      set((state) => ({ offlineQueueCount: state.offlineQueueCount + 1 }));
-      return;
-    }
+  addIncident: async (data) => {
+    const { isDegradedMode, isMuted, isApiConnected } = get();
 
     playDispatchChime(isMuted);
 
@@ -274,6 +366,7 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
     const assessedAssessment = assessIncident(draftIncident);
     draftIncident.assessment = assessedAssessment;
 
+    // Optimistic UI update
     set((state) => {
       const updated = [draftIncident, ...state.incidents];
       return {
@@ -282,8 +375,52 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
       };
     });
 
-    // Re-evaluate allocations
+    // Re-evaluate allocations immediately with zero latency
     get().runAllocation();
+
+    // Offline / Degraded or Network Disconnect Handling
+    if (isDegradedMode || !isApiConnected) {
+      await queueOfflineSos({
+        id: draftIncident.id,
+        raw_sos_text: `${data.zoneName}: ${data.eventType} - ${data.accessNote}`,
+        primary_need: data.eventType === 'FLOOD' ? 'Water_Evacuation' : data.eventType === 'LANDSLIDE' ? 'Road_Clearance' : 'Medical_Emergency',
+        latitude: data.location.lat,
+        longitude: data.location.lng,
+        client_recorded_at: new Date().toISOString(),
+        people_count: data.casualties.affected,
+        vulnerable_infants: data.casualties.children,
+        vulnerable_elderly: data.casualties.elderly,
+        vulnerable_critical_ill: data.casualties.injured,
+      }).catch((e) => console.warn('[ResQ] Dexie queue error:', e));
+
+      set((state) => ({ offlineQueueCount: state.offlineQueueCount + 1 }));
+      return;
+    }
+
+    // Online dispatch to Express backend
+    try {
+      await apiClient.createIncident({
+        raw_sos_text: `${data.zoneName}: ${data.eventType} - ${data.accessNote} (Affected: ${data.casualties.affected})`,
+        latitude: data.location.lat,
+        longitude: data.location.lng,
+        origin_channel: 'FIELD_APP',
+      });
+    } catch (err) {
+      console.warn('[ResQ] Failed to push incident to API, buffering in Dexie:', err);
+      await queueOfflineSos({
+        id: draftIncident.id,
+        raw_sos_text: `${data.zoneName}: ${data.eventType} - ${data.accessNote}`,
+        primary_need: 'Emergency_Triage',
+        latitude: data.location.lat,
+        longitude: data.location.lng,
+        client_recorded_at: new Date().toISOString(),
+        people_count: data.casualties.affected,
+        vulnerable_infants: data.casualties.children,
+        vulnerable_elderly: data.casualties.elderly,
+        vulnerable_critical_ill: data.casualties.injured,
+      }).catch(() => {});
+      set((state) => ({ offlineQueueCount: state.offlineQueueCount + 1 }));
+    }
   },
 
   setDiffModalOpen: (open) => set({ isDiffModalOpen: open }),
@@ -291,13 +428,48 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
   setFieldFormOpen: (open) => set({ isFieldFormOpen: open }),
   setFleetDrawerOpen: (open) => set({ isFleetDrawerOpen: open }),
 
-  toggleDegradedMode: () => {
-    const { isDegradedMode, offlineQueueCount } = get();
-    if (isDegradedMode && offlineQueueCount > 0) {
-      // Reconnected and flushing
+  toggleDegradedMode: async () => {
+    const { isDegradedMode, offlineQueueCount, isApiConnected } = get();
+
+    // If reconnecting from degraded mode with queued reports
+    if (isDegradedMode) {
+      if (offlineQueueCount > 0 && isApiConnected) {
+        set({ isSyncing: true });
+        try {
+          const unsynced = await getUnsyncedSosReports();
+          if (unsynced.length > 0) {
+            const batchPayload = {
+              client_device_id: 'COMMANDER_COCKPIT_WEB_01',
+              synced_at: new Date().toISOString(),
+              queued_incidents: unsynced.map((u) => ({
+                id: u.id.startsWith('inc-') ? `c0000001-0000-0000-0000-${String(Math.floor(100000000000 + Math.random() * 899999999999))}` : u.id,
+                raw_sos_text: u.raw_sos_text,
+                primary_need: u.primary_need,
+                latitude: u.latitude,
+                longitude: u.longitude,
+                client_recorded_at: u.client_recorded_at,
+                people_count: u.people_count,
+                vulnerable_infants: u.vulnerable_infants,
+                vulnerable_elderly: u.vulnerable_elderly,
+                vulnerable_critical_ill: u.vulnerable_critical_ill,
+              })),
+            };
+
+            await apiClient.batchSync(batchPayload);
+            await markSosReportsSynced(unsynced.map((u) => u.id));
+          }
+        } catch (syncErr) {
+          console.error('[ResQ] Batch reconciliation failed:', syncErr);
+        }
+        set({ isDegradedMode: false, offlineQueueCount: 0, isSyncing: false });
+        // Refresh store from live backend
+        get().hydrateFromBackend();
+        return;
+      }
+
       set({ isDegradedMode: false, offlineQueueCount: 0 });
     } else {
-      set({ isDegradedMode: !isDegradedMode });
+      set({ isDegradedMode: true });
     }
   },
 

@@ -9,6 +9,7 @@ import { MobileFieldSOSModal } from './components/MobileFieldSOSModal';
 import { FleetDrawer } from './components/FleetDrawer';
 import { JudgeDemoTour } from './components/JudgeDemoTour';
 import { useDisasterStore } from './stores/useDisasterStore';
+import { subscribeToDisasterUpdates } from './services/supabaseRealtime';
 
 export const App: React.FC = () => {
   const {
@@ -18,12 +19,36 @@ export const App: React.FC = () => {
     setEquityDrawerOpen,
     isEquityDrawerOpen,
     isDiffModalOpen,
+    hydrateFromBackend,
+    isDegradedMode,
   } = useDisasterStore();
 
-  // Run initial allocation on startup so dashboard is pre-populated with mathematical recommendations
+  // Hydrate store from backend API on mount + setup live poll fallback
   useEffect(() => {
-    runAllocation();
-  }, [runAllocation]);
+    hydrateFromBackend();
+
+    // Set up background heartbeat / refresh every 20 seconds when not in degraded offline mode
+    const pollInterval = setInterval(() => {
+      if (!isDegradedMode) {
+        hydrateFromBackend();
+      }
+    }, 20000);
+
+    // Supabase Realtime WebSocket listener for live Postgres push
+    const unsubscribe = subscribeToDisasterUpdates({
+      onIncidentChange: () => {
+        hydrateFromBackend();
+      },
+      onAssetChange: () => {
+        hydrateFromBackend();
+      },
+    });
+
+    return () => {
+      clearInterval(pollInterval);
+      unsubscribe();
+    };
+  }, [hydrateFromBackend, isDegradedMode]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
