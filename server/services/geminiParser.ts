@@ -189,7 +189,7 @@ export async function extractSosIntent(rawText: string): Promise<GeminiSosExtrac
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.6-flash',
         contents: [
           { role: 'user', parts: [{ text: `${SYSTEM_PROMPT}\n\nDistress Message:\n"${rawText}"` }] },
         ],
