@@ -15,108 +15,105 @@ INSERT INTO agencies (id, category, name, incident_commander, radio_channel, pho
 
 -- ── Assets ────────────────────────────────────────────────────────────────────
 -- NDRF: 4 Motorized Boats, 2 Inflatable Boats, 1 Payload Drone
-INSERT INTO assets (id, agency_id, name, call_sign, category, capability_tags, capabilities, fuel_level, status, location) VALUES
+INSERT INTO assets (id, agency_id, name, call_sign, category, category_detail, capability_tags, capabilities, fuel_level, status, location) VALUES
 
     -- NDRF Motorized Rescue Boats
     ('b0000001-0000-0000-0000-000000000001', 'a0000001-0000-0000-0000-000000000001',
-     'NDRF Motorized Rescue Boat Alpha-1', 'NDRF-MB1', 'Motorized_Rescue_Boat',
+     'NDRF Motorized Rescue Boat Alpha-1', 'NDRF-MB1', 'Motorized_Rescue_Boat', NULL,
      ARRAY['water_rescue','evac','floodwater_capable'],
      '{"evac_capacity_persons":8,"speed_kmh":30,"max_range_km":35,"floodwater_capable":true}'::jsonb,
      0.92, 'Available', ST_SetSRID(ST_MakePoint(75.7800, 26.9200), 4326)),
 
     ('b0000001-0000-0000-0000-000000000002', 'a0000001-0000-0000-0000-000000000001',
-     'NDRF Motorized Rescue Boat Alpha-2', 'NDRF-MB2', 'Motorized_Rescue_Boat',
+     'NDRF Motorized Rescue Boat Alpha-2', 'NDRF-MB2', 'Motorized_Rescue_Boat', NULL,
      ARRAY['water_rescue','evac','floodwater_capable'],
      '{"evac_capacity_persons":8,"speed_kmh":30,"max_range_km":35,"floodwater_capable":true}'::jsonb,
      0.78, 'Available', ST_SetSRID(ST_MakePoint(75.7650, 26.9150), 4326)),
 
     ('b0000001-0000-0000-0000-000000000003', 'a0000001-0000-0000-0000-000000000001',
-     'NDRF Motorized Rescue Boat Alpha-3', 'NDRF-MB3', 'Motorized_Rescue_Boat',
+     'NDRF Motorized Rescue Boat Alpha-3', 'NDRF-MB3', 'Motorized_Rescue_Boat', NULL,
      ARRAY['water_rescue','evac','floodwater_capable'],
      '{"evac_capacity_persons":8,"speed_kmh":30,"max_range_km":35,"floodwater_capable":true}'::jsonb,
      0.85, 'Available', ST_SetSRID(ST_MakePoint(75.7900, 26.8900), 4326)),
 
     ('b0000001-0000-0000-0000-000000000004', 'a0000001-0000-0000-0000-000000000001',
-     'NDRF Motorized Rescue Boat Alpha-4', 'NDRF-MB4', 'Motorized_Rescue_Boat',
+     'NDRF Motorized Rescue Boat Alpha-4', 'NDRF-MB4', 'Motorized_Rescue_Boat', NULL,
      ARRAY['water_rescue','evac','floodwater_capable'],
      '{"evac_capacity_persons":8,"speed_kmh":30,"max_range_km":35,"floodwater_capable":true}'::jsonb,
      0.60, 'Available', ST_SetSRID(ST_MakePoint(75.8050, 26.9300), 4326)),
 
     -- NDRF Inflatable Rescue Boats (shallow water, narrower channels)
     ('b0000001-0000-0000-0000-000000000005', 'a0000001-0000-0000-0000-000000000001',
-     'NDRF Inflatable Boat Beta-1', 'NDRF-IB1', 'Inflatable_Rescue_Boat',
+     'NDRF Inflatable Boat Beta-1', 'NDRF-IB1', 'Inflatable_Rescue_Boat', NULL,
      ARRAY['water_rescue','evac','floodwater_capable','shallow_water'],
      '{"evac_capacity_persons":4,"speed_kmh":18,"max_range_km":20,"floodwater_capable":true,"shallow_water":true}'::jsonb,
      0.95, 'Available', ST_SetSRID(ST_MakePoint(75.7720, 26.9050), 4326)),
 
     ('b0000001-0000-0000-0000-000000000006', 'a0000001-0000-0000-0000-000000000001',
-     'NDRF Inflatable Boat Beta-2', 'NDRF-IB2', 'Inflatable_Rescue_Boat',
+     'NDRF Inflatable Boat Beta-2', 'NDRF-IB2', 'Inflatable_Rescue_Boat', NULL,
      ARRAY['water_rescue','evac','floodwater_capable','shallow_water'],
      '{"evac_capacity_persons":4,"speed_kmh":18,"max_range_km":20,"floodwater_capable":true,"shallow_water":true}'::jsonb,
      0.88, 'Available', ST_SetSRID(ST_MakePoint(75.7600, 26.8800), 4326)),
 
     -- NDRF Payload Delivery Drone
     ('b0000001-0000-0000-0000-000000000007', 'a0000001-0000-0000-0000-000000000001',
-     'NDRF Supply Drone Gamma-1', 'NDRF-D1', 'Payload_Delivery_Drone',
+     'NDRF Supply Drone Gamma-1', 'NDRF-D1', 'Payload_Delivery_Drone', NULL,
      ARRAY['evac','supply_drop','recon'],
      '{"evac_capacity_persons":0,"payload_kg":5,"speed_kmh":60,"max_range_km":15,"thermal_camera":false}'::jsonb,
      0.75, 'Available', ST_SetSRID(ST_MakePoint(75.7800, 26.9200), 4326)),
 
     -- SDRF: 2 Ambulances, 2 K9 Search Squads
     ('b0000001-0000-0000-0000-000000000008', 'a0000001-0000-0000-0000-000000000002',
-     'SDRF Medical Ambulance Delta-1', 'SDRF-A1', '4x4_Ambulance',
+     'SDRF Medical Ambulance Delta-1', 'SDRF-A1', '4x4_Ambulance', NULL,
      ARRAY['medical_als','medical_bls','evac','road_capable'],
      '{"evac_capacity_persons":3,"speed_kmh":60,"max_range_km":80,"medical_als":true,"medical_bls":true}'::jsonb,
      0.90, 'Available', ST_SetSRID(ST_MakePoint(75.7500, 26.9100), 4326)),
 
     ('b0000001-0000-0000-0000-000000000009', 'a0000001-0000-0000-0000-000000000002',
-     'SDRF Medical Ambulance Delta-2', 'SDRF-A2', '4x4_Ambulance',
+     'SDRF Medical Ambulance Delta-2', 'SDRF-A2', '4x4_Ambulance', NULL,
      ARRAY['medical_als','medical_bls','evac','road_capable'],
      '{"evac_capacity_persons":3,"speed_kmh":60,"max_range_km":80,"medical_als":true,"medical_bls":true}'::jsonb,
      0.82, 'Available', ST_SetSRID(ST_MakePoint(75.8100, 26.9000), 4326)),
 
     ('b0000001-0000-0000-0000-000000000010', 'a0000001-0000-0000-0000-000000000002',
-     'SDRF K9 Search Squad Echo-1', 'SDRF-K1', 'K9_Search_Squad',
+     'SDRF K9 Search Squad Echo-1', 'SDRF-K1', 'K9_Search_Squad', NULL,
      ARRAY['search_rescue','structural','road_capable'],
      '{"evac_capacity_persons":0,"speed_kmh":40,"max_range_km":50,"k9":true}'::jsonb,
      1.0, 'Available', ST_SetSRID(ST_MakePoint(75.7650, 26.8950), 4326)),
 
     ('b0000001-0000-0000-0000-000000000011', 'a0000001-0000-0000-0000-000000000002',
-     'SDRF K9 Search Squad Echo-2', 'SDRF-K2', 'K9_Search_Squad',
+     'SDRF K9 Search Squad Echo-2', 'SDRF-K2', 'K9_Search_Squad', NULL,
      ARRAY['search_rescue','structural','road_capable'],
      '{"evac_capacity_persons":0,"speed_kmh":40,"max_range_km":50,"k9":true}'::jsonb,
      1.0, 'Available', ST_SetSRID(ST_MakePoint(75.7900, 26.9100), 4326)),
 
     -- Police: 2 Surveillance Drones
     ('b0000001-0000-0000-0000-000000000012', 'a0000001-0000-0000-0000-000000000003',
-     'Jaipur Police Surveillance Drone Foxtrot-1', 'JCP-D1', 'Surveillance_Drone',
+     'Jaipur Police Surveillance Drone Foxtrot-1', 'JCP-D1', 'Surveillance_Drone', NULL,
      ARRAY['recon','thermal_camera'],
      '{"evac_capacity_persons":0,"speed_kmh":80,"max_range_km":10,"thermal_camera":true}'::jsonb,
      0.95, 'Available', ST_SetSRID(ST_MakePoint(75.7800, 26.9200), 4326)),
 
     ('b0000001-0000-0000-0000-000000000013', 'a0000001-0000-0000-0000-000000000003',
-     'Jaipur Police Surveillance Drone Foxtrot-2', 'JCP-D2', 'Surveillance_Drone',
+     'Jaipur Police Surveillance Drone Foxtrot-2', 'JCP-D2', 'Surveillance_Drone', NULL,
      ARRAY['recon','thermal_camera'],
      '{"evac_capacity_persons":0,"speed_kmh":80,"max_range_km":10,"thermal_camera":true}'::jsonb,
      0.70, 'Available', ST_SetSRID(ST_MakePoint(75.7600, 26.9000), 4326)),
 
     -- Health Dept: 1 Medical Team
     ('b0000001-0000-0000-0000-000000000014', 'a0000001-0000-0000-0000-000000000004',
-     'SMS Hospital DART Medical Team Golf-1', 'SMS-MT1', 'Medical_Team',
+     'SMS Hospital DART Medical Team Golf-1', 'SMS-MT1', 'Medical_Team', NULL,
      ARRAY['medical_als','medical_bls','triage','road_capable'],
      '{"evac_capacity_persons":2,"speed_kmh":50,"max_range_km":30,"medical_als":true,"medical_bls":true,"triage":true}'::jsonb,
      1.0, 'Available', ST_SetSRID(ST_MakePoint(75.7700, 26.9150), 4326)),
 
     -- NGO Volunteer: 1 Other asset (private boat syndicate)
     ('b0000001-0000-0000-0000-000000000015', 'a0000001-0000-0000-0000-000000000005',
-     'Volunteer Fishing Boat Syndicate Hotel-1', 'VOL-B1', 'Other',
+     'Volunteer Fishing Boat Syndicate Hotel-1', 'VOL-B1', 'Other', 'Private motorized fishing boat fleet — local river knowledge',
      ARRAY['water_rescue','evac','shallow_water'],
      '{"evac_capacity_persons":6,"speed_kmh":15,"max_range_km":18,"floodwater_capable":true}'::jsonb,
      1.0, 'Available', ST_SetSRID(ST_MakePoint(75.7550, 26.8900), 4326));
 
--- Set category_detail for the 'Other' volunteer asset
-UPDATE assets SET category_detail = 'Private motorized fishing boat fleet — local river knowledge'
-WHERE id = 'b0000001-0000-0000-0000-000000000015';
 
 -- ── Incidents ─────────────────────────────────────────────────────────────────
 -- 10 incidents across triage tiers and need categories
@@ -154,7 +151,7 @@ INSERT INTO incidents (
      'WEB_SOS', 'Water_Evacuation', 'T1_Immediate', 0.89, 0.88,
      'T1_Immediate: two diabetic elderly isolated on rooftop, road submerged, no self-evacuation possible.',
      ARRAY['water_rescue','evac'],
-     2, 0, 2, 1,
+     2, 0, 1, 1,
      ST_SetSRID(ST_MakePoint(75.7620, 26.9120), 4326),
      '873da2181ffffff', '893da218173ffff', 'Open'),
 

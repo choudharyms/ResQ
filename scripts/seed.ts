@@ -52,7 +52,7 @@ const INCIDENTS = [
     primary_need: 'Water_Evacuation', ai_triage_tier: 'T1_Immediate', priority_score: 0.89, ai_confidence: 0.88,
     required_capability_tags: ['water_rescue', 'evac'],
     ai_rationale: 'T1_Immediate: two diabetic elderly isolated on rooftop, road submerged, no self-evacuation possible.',
-    people_count: 2, vulnerable_infants: 0, vulnerable_elderly: 2, vulnerable_critical_ill: 1,
+    people_count: 2, vulnerable_infants: 0, vulnerable_elderly: 1, vulnerable_critical_ill: 1,
     lat: 26.9120, lng: 75.7620,
   },
   {
