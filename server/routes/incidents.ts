@@ -9,16 +9,18 @@ import { refreshEquityAsync } from '../services/equityService.js';
 
 const router = Router();
 
+const UUIDParam = z.string().uuid();
+
 // ── Validation ────────────────────────────────────────────────────────────────
 const CreateIncidentSchema = z.object({
-  raw_sos_text:      z.string().min(5, 'SOS message must be at least 5 characters'),
-  latitude:          z.number().min(-90).max(90),
-  longitude:         z.number().min(-180).max(180),
-  origin_channel:    z.enum(['WEB_SOS', 'FIELD_APP', 'SMS_GATEWAY', 'COMMANDER_ENTRY']).default('WEB_SOS'),
+  raw_sos_text:       z.string().min(5, 'SOS message must be at least 5 characters'),
+  latitude:           z.number().min(-90).max(90),
+  longitude:          z.number().min(-180).max(180),
+  origin_channel:     z.enum(['WEB_SOS', 'FIELD_APP', 'SMS_GATEWAY', 'COMMANDER_ENTRY']).default('WEB_SOS'),
   reporter_device_id: z.string().max(64).optional(),
-  // Optional manual overrides (e.g. commander bypasses AI for known situation)
-  override_need:     z.string().optional(),
-  override_priority: z.number().min(0).max(1).optional(),
+  // Commander AI override: applied AFTER Gemini extraction, overrides specific fields
+  override_need:      z.string().optional(),
+  override_priority:  z.number().min(0).max(1).optional(),
 });
 
 // ── POST /api/incidents ───────────────────────────────────────────────────────
@@ -29,11 +31,15 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(400).json({ ok: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.flatten() } });
   }
 
-  const { raw_sos_text, latitude, longitude, origin_channel, reporter_device_id } = parsed.data;
+  const { raw_sos_text, latitude, longitude, origin_channel, reporter_device_id, override_need, override_priority } = parsed.data;
 
   try {
     // 1. Extract structured intent with Gemini (never throws — returns fallback on failure)
-    const extraction = await extractSosIntent(raw_sos_text);
+    let extraction = await extractSosIntent(raw_sos_text);
+
+    // 1a. Apply commander overrides (post-extraction; overrides take precedence over AI)
+    if (override_need)     extraction = { ...extraction, primary_need: override_need as typeof extraction.primary_need };
+    if (override_priority) extraction = { ...extraction, priority_score: override_priority };
 
     // 2. Compute H3 hex indices
     const { h3_res7, h3_res9 } = latLngToH3Pair(latitude, longitude);
@@ -72,7 +78,7 @@ router.post('/', async (req: Request, res: Response) => {
         extraction.required_capability_tags,
         extraction.ai_triage_tier,
         extraction.priority_score,
-        extraction.ai_confidence,
+        extraction.ai_confidence ?? null,
         extraction.ai_rationale,
         extraction.people_count,
         extraction.vulnerable_infants,
@@ -128,7 +134,7 @@ router.get('/', async (req: Request, res: Response) => {
       [status, limit]
     );
 
-    return res.json({ ok: true, data: result.rows, count: result.rowCount });
+    return res.json({ ok: true, data: result.rows, count: result.rowCount ?? 0 });
   } catch (err) {
     console.error('[GET /incidents]', err);
     return res.status(500).json({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch incidents' } });
@@ -137,6 +143,11 @@ router.get('/', async (req: Request, res: Response) => {
 
 // ── GET /api/incidents/:id ────────────────────────────────────────────────────
 router.get('/:id', async (req: Request, res: Response) => {
+  const idParsed = UUIDParam.safeParse(req.params.id);
+  if (!idParsed.success) {
+    return res.status(400).json({ ok: false, error: { code: 'INVALID_ID', message: 'ID must be a valid UUID' } });
+  }
+
   try {
     const result = await pool.query(
       `SELECT
@@ -145,13 +156,13 @@ router.get('/:id', async (req: Request, res: Response) => {
           ST_Y(i.location::GEOMETRY) AS latitude,
           aa.asset_id                AS assigned_asset_id,
           aa.distance_km,
-          aa.eta_minutes             AS est_transit_minutes,
+          aa.est_transit_minutes,
           aa.dispatched_at,
           aa.allocation_status
        FROM incidents i
        LEFT JOIN active_allocations aa ON aa.incident_id = i.id
        WHERE i.id = $1`,
-      [req.params.id]
+      [idParsed.data]
     );
 
     if (!result.rows.length) {
@@ -172,16 +183,24 @@ const UpdateStatusSchema = z.object({
 });
 
 router.patch('/:id/status', async (req: Request, res: Response) => {
+  const idParsed = UUIDParam.safeParse(req.params.id);
+  if (!idParsed.success) {
+    return res.status(400).json({ ok: false, error: { code: 'INVALID_ID', message: 'ID must be a valid UUID' } });
+  }
+
   const parsed = UpdateStatusSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.flatten() } });
   }
 
   try {
-    await pool.query(
+    const result = await pool.query(
       `UPDATE incidents SET status = $1, updated_at = NOW(), updated_by = $2 WHERE id = $3`,
-      [parsed.data.status, parsed.data.updated_by, req.params.id]
+      [parsed.data.status, parsed.data.updated_by, idParsed.data]
     );
+    if ((result.rowCount ?? 0) === 0) {
+      return res.status(404).json({ ok: false, error: { code: 'NOT_FOUND', message: 'Incident not found' } });
+    }
     refreshEquityAsync();
     return res.json({ ok: true });
   } catch (err) {

@@ -5,6 +5,7 @@ import { handleAssetDegradation, updateAllocationStatus } from '../services/allo
 import { refreshEquityAsync } from '../services/equityService.js';
 
 const router = Router();
+const UUIDParam = z.string().uuid();
 
 // ── GET /api/assets ───────────────────────────────────────────────────────────
 // Returns all active (non-deleted) assets with live coordinates for the map layer
@@ -42,13 +43,18 @@ const UpdateAssetStatusSchema = z.object({
 });
 
 router.patch('/:id/status', async (req: Request, res: Response) => {
+  const idParsed = UUIDParam.safeParse(req.params.id);
+  if (!idParsed.success) {
+    return res.status(400).json({ ok: false, error: { code: 'INVALID_ID', message: 'ID must be a valid UUID' } });
+  }
+
   const parsed = UpdateAssetStatusSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.flatten() } });
   }
 
   const { status, reason, updated_by } = parsed.data;
-  const assetId = req.params.id;
+  const assetId = idParsed.data;
 
   try {
     if (status === 'Degraded') {
@@ -64,17 +70,26 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
     }
 
     if (status === 'Returning') {
-      // 'Returning' means mission complete — mark allocation Completed
+      // Asset is returning to base — allocation is complete but incident resolution
+      // must be confirmed separately by the commander (do NOT auto-resolve incident).
       const result = await updateAllocationStatus(assetId, 'Completed', updated_by);
+      // Only mark asset as Returning — incident stays On_Scene until commander resolves
+      await pool.query(
+        `UPDATE assets SET status = 'Returning', updated_at = NOW(), updated_by = $1 WHERE id = $2`,
+        [updated_by, assetId]
+      );
       refreshEquityAsync();
       return res.json({ ok: result.ok, data: result });
     }
 
     // Generic status update (Available, Standby, Offline, Refueling_Resting)
-    await pool.query(
+    const result = await pool.query(
       `UPDATE assets SET status = $1, updated_at = NOW(), updated_by = $2 WHERE id = $3`,
       [status, updated_by, assetId]
     );
+    if ((result.rowCount ?? 0) === 0) {
+      return res.status(404).json({ ok: false, error: { code: 'NOT_FOUND', message: 'Asset not found' } });
+    }
     return res.json({ ok: true });
 
   } catch (err) {
@@ -86,13 +101,18 @@ router.patch('/:id/status', async (req: Request, res: Response) => {
 // ── PATCH /api/assets/:id/telemetry ──────────────────────────────────────────
 // Lightweight GPS + fuel ping from field units (called frequently)
 const TelemetrySchema = z.object({
-  latitude:   z.number().min(-90).max(90),
-  longitude:  z.number().min(-180).max(180),
-  fuel_level: z.number().min(0).max(1).optional(),
+  latitude:       z.number().min(-90).max(90),
+  longitude:      z.number().min(-180).max(180),
+  fuel_level:     z.number().min(0).max(1).optional(),
   ping_timestamp: z.string().datetime().optional(),
 });
 
 router.patch('/:id/telemetry', async (req: Request, res: Response) => {
+  const idParsed = UUIDParam.safeParse(req.params.id);
+  if (!idParsed.success) {
+    return res.status(400).json({ ok: false, error: { code: 'INVALID_ID', message: 'ID must be a valid UUID' } });
+  }
+
   const parsed = TelemetrySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: { code: 'VALIDATION_ERROR', message: parsed.error.flatten() } });
@@ -101,15 +121,18 @@ router.patch('/:id/telemetry', async (req: Request, res: Response) => {
   const { latitude, longitude, fuel_level } = parsed.data;
 
   try {
-    await pool.query(
+    const result = await pool.query(
       `UPDATE assets
        SET    location          = ST_SetSRID(ST_MakePoint($2, $1), 4326),
               fuel_level        = COALESCE($3, fuel_level),
               last_telemetry_at = NOW(),
               updated_at        = NOW()
        WHERE  id = $4 AND is_deleted = FALSE`,
-      [latitude, longitude, fuel_level ?? null, req.params.id]
+      [latitude, longitude, fuel_level ?? null, idParsed.data]
     );
+    if ((result.rowCount ?? 0) === 0) {
+      return res.status(404).json({ ok: false, error: { code: 'NOT_FOUND', message: 'Asset not found' } });
+    }
     return res.json({ ok: true });
   } catch (err) {
     console.error('[PATCH /assets/:id/telemetry]', err);

@@ -154,18 +154,14 @@ AS $$
 DECLARE
     v_active_alloc  allocations%ROWTYPE;
 BEGIN
-    -- Lock and update the asset
-    UPDATE assets
-    SET    status     = 'Degraded',
-           updated_at = NOW(),
-           updated_by = 'SYSTEM_FAILOVER'
-    WHERE  id = p_asset_id;
-
+    -- 1. Check the asset exists and lock it before any other writes
+    PERFORM id FROM assets WHERE id = p_asset_id FOR UPDATE;
     IF NOT FOUND THEN
         RETURN jsonb_build_object('ok', false, 'code', 'ASSET_NOT_FOUND');
     END IF;
 
-    -- Find active allocation for this asset (if any)
+    -- 2. Find active allocation FIRST (before changing asset state).
+    --    If this SELECT fails or returns nothing, the asset state is still clean.
     SELECT * INTO v_active_alloc
     FROM   allocations
     WHERE  asset_id = p_asset_id
@@ -173,6 +169,13 @@ BEGIN
     ORDER BY dispatched_at DESC
     LIMIT  1
     FOR UPDATE;
+
+    -- 3. Now safe to mark asset Degraded — allocation state is locked
+    UPDATE assets
+    SET    status     = 'Degraded',
+           updated_at = NOW(),
+           updated_by = 'SYSTEM_FAILOVER'
+    WHERE  id = p_asset_id;
 
     -- Asset was idle (Available/Standby) — just mark degraded, no orphaned incident
     IF NOT FOUND THEN
@@ -182,13 +185,13 @@ BEGIN
         );
     END IF;
 
-    -- Supersede the broken allocation leg
+    -- 4. Supersede the broken allocation leg
     UPDATE allocations
     SET    status              = 'Superseded',
            supersession_reason = p_reason
     WHERE  id = v_active_alloc.id;
 
-    -- Reopen the incident for immediate re-queuing
+    -- 5. Reopen the incident for immediate re-queuing
     UPDATE incidents
     SET    status     = 'Open',
            updated_at = NOW(),
@@ -221,6 +224,15 @@ DECLARE
     v_alloc     allocations%ROWTYPE;
     v_now       TIMESTAMPTZ := NOW();
 BEGIN
+    -- Guard: only allow valid forward transitions
+    IF p_new_status NOT IN ('En_Route', 'On_Scene', 'Completed') THEN
+        RETURN jsonb_build_object(
+            'ok',    false,
+            'code',  'INVALID_STATUS',
+            'message', 'Allowed values: En_Route, On_Scene, Completed'
+        );
+    END IF;
+
     SELECT * INTO v_alloc
     FROM   allocations
     WHERE  asset_id = p_asset_id

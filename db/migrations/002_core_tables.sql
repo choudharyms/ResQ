@@ -152,8 +152,9 @@ CREATE TABLE allocations (
     est_fuel_drain      FLOAT       NOT NULL CHECK (est_fuel_drain BETWEEN 0.0 AND 1.0),
 
     -- Allocation state machine
-    -- Values: Dispatched | En_Route | On_Scene | Completed | Superseded
-    status              TEXT        NOT NULL DEFAULT 'Dispatched',
+    -- Valid values enforced by CHECK constraint below
+    status              TEXT        NOT NULL DEFAULT 'Dispatched'
+                            CHECK (status IN ('Dispatched', 'En_Route', 'On_Scene', 'Completed', 'Superseded')),
 
     superseded_by_id    UUID        REFERENCES allocations(id),
     supersession_reason TEXT,
