@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --surface-canvas: #F8FAFC;
+    --surface-panel: #FFFFFF;
+    --surface-card: #F1F5F9;
+    --surface-hover: #E2E8F0;
+    
+    --border-subtle: #E2E8F0;
+    --border-strong: #CBD5E1;
+    --border-focus: #4F46E5;
+    
+    --status-critical: #DC2626;
+    --status-high: #D97706;
+    --status-moderate: #CA8A04;
+    --status-safe: #059669;
+    --status-dispatched: #2563EB;
+    --status-forgotten: #7C3AED;
+    
+    --text-primary: #0F172A;
+    --text-secondary: #334155;
+    --text-muted: #64748B;
+  }
+
+  .dark {
+    --surface-canvas: #0B0F19;
+    --surface-panel: #111827;
+    --surface-card: #1F2937;
+    --surface-hover: #374151;
+    
+    --border-subtle: #1F2937;
+    --border-strong: #374151;
+    --border-focus: #6366F1;
+    
+    --status-critical: #EF4444;
+    --status-high: #F59E0B;
+    --status-moderate: #FACC15;
+    --status-safe: #10B981;
+    --status-dispatched: #3B82F6;
+    --status-forgotten: #A855F7;
+    
+    --text-primary: #F8FAFC;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
+  }
+}
+
+/* Custom Tactical Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Leaflet Tactical Dark Inversion */
+.dark .leaflet-tile-pane {
+  filter: brightness(0.6) invert(1) contrast(2.8) hue-rotate(190deg) saturate(0.25) brightness(0.65);
+}
+
+.leaflet-container {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  background: #0B0F19 !important;
+}
+
+/* Tactical Map Custom Popup */
+.leaflet-popup-content-wrapper {
+  background: #111827 !important;
+  color: #F8FAFC !important;
+  border: 1px solid #374151 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-popup-tip {
+  background: #111827 !important;
+  border: 1px solid #374151 !important;
+}
+
+/* Pulse Keyframes for Forgotten Zones */
+@keyframes forgotten-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(168, 85, 247, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+  }
+}
+
+.pulse-forgotten {
+  animation: forgotten-pulse 2s infinite;
+}
