@@ -3,6 +3,9 @@ import pg from 'pg';
 import { config } from './config.js';
 import { mockDb } from './mockDb.js';
 
+// Re-export mockDb so routes can call mockDb.resetToSeed() etc.
+export { mockDb };
+
 // ── Supabase client (service role — full permissions, backend only) ────────────
 export const supabase = createClient(
   config.SUPABASE_URL,

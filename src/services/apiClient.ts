@@ -106,16 +106,35 @@ function mapBackendAssetStatus(status: string): AssetStatus {
   return 'AVAILABLE';
 }
 
-// Map agency string to AgencyType
+// Explicit map of backend agency_category → frontend AgencyType
+const AGENCY_CATEGORY_MAP: Record<string, AgencyType> = {
+  'NDRF': 'NDRF',
+  'SDRF': 'SDRF',
+  'Local_Police': 'POLICE',
+  'Health_Dept': 'EMS',
+  'NGO_Volunteer': 'ITBP', // ITBP covers mountain volunteer/paramilitary corps
+};
+
+// Map agency string to AgencyType — try category map first, then name substring
 function mapAgencyCategory(agencyCat: string, agencyName: string): AgencyType {
-  const combined = (agencyCat + ' ' + agencyName).toUpperCase();
-  if (combined.includes('NDRF')) return 'NDRF';
-  if (combined.includes('SDRF')) return 'SDRF';
-  if (combined.includes('POLICE')) return 'POLICE';
-  if (combined.includes('HEALTH') || combined.includes('HOSPITAL') || combined.includes('TRAUMA') || combined.includes('EMS') || combined.includes('AIIMS')) return 'EMS';
-  if (combined.includes('ITBP') || combined.includes('ARMY') || combined.includes('NGO')) return 'ITBP';
+  if (AGENCY_CATEGORY_MAP[agencyCat]) return AGENCY_CATEGORY_MAP[agencyCat];
+  const upper = (agencyName).toUpperCase();
+  if (upper.includes('NDRF')) return 'NDRF';
+  if (upper.includes('SDRF')) return 'SDRF';
+  if (upper.includes('POLICE')) return 'POLICE';
+  if (upper.includes('AIIMS') || upper.includes('HOSPITAL') || upper.includes('EMS') || upper.includes('HEALTH') || upper.includes('MEDICAL')) return 'EMS';
+  if (upper.includes('ITBP') || upper.includes('NGO') || upper.includes('VOLUNTEER') || upper.includes('HIMALAYAN')) return 'ITBP';
   return 'NDRF';
 }
+
+// Normalize capability_tags that may arrive as space-joined string (mock mode) or proper array
+function normalizeTags(tags: string[] | string | undefined | null): string[] {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags;
+  // Space-separated string from mock SQL serialization
+  return (tags as string).split(/[\s,]+/).filter(Boolean);
+}
+
 
 // Transform backend incident to frontend Incident
 export function transformBackendIncident(b: BackendIncident): Incident {
@@ -173,9 +192,11 @@ export function transformBackendIncident(b: BackendIncident): Incident {
 // Transform backend asset to frontend Asset
 export function transformBackendAsset(b: BackendAsset): Asset {
   const agency = mapAgencyCategory(b.agency_category, b.agency_name);
+  const tags = normalizeTags(b.capability_tags);
+
   let category: Asset['category'] = 'RESCUE_SQUAD';
   const catUpper = b.category.toUpperCase();
-  if (catUpper.includes('BOAT') || catUpper.includes('RAFT')) category = 'BOAT';
+  if (catUpper.includes('BOAT') || catUpper.includes('RAFT') || catUpper.includes('ZODIAC')) category = 'BOAT';
   else if (catUpper.includes('AMBULANCE')) category = 'AMBULANCE';
   else if (catUpper.includes('DRONE') || catUpper.includes('SURVEILLANCE')) category = 'DRONE';
   else if (catUpper.includes('TRUCK') || catUpper.includes('SUPPLY')) category = 'SUPPLY_TRUCK';
@@ -188,12 +209,12 @@ export function transformBackendAsset(b: BackendAsset): Asset {
     category,
     subType: b.category_detail || b.category.replace(/_/g, ' '),
     capabilities: {
-      waterRescue: b.capability_tags?.includes('water_rescue') || category === 'BOAT',
-      mountainRescue: b.capability_tags?.includes('search_rescue') || category === 'RESCUE_SQUAD',
-      blsMedical: b.capability_tags?.includes('medical_bls') || category === 'AMBULANCE',
-      alsMedical: b.capability_tags?.includes('medical_als'),
-      rubbleRescue: b.capability_tags?.includes('structural'),
-      thermalVision: b.capability_tags?.includes('thermal_camera') || category === 'DRONE',
+      waterRescue: tags.includes('water_rescue') || category === 'BOAT',
+      mountainRescue: tags.includes('search_rescue') || category === 'RESCUE_SQUAD',
+      blsMedical: tags.includes('medical_bls') || category === 'AMBULANCE',
+      alsMedical: tags.includes('medical_als'),
+      rubbleRescue: tags.includes('structural'),
+      thermalVision: tags.includes('thermal_camera') || category === 'DRONE',
       passengerCapacity: Number(b.capabilities?.evac_capacity_persons) || (category === 'BOAT' ? 12 : 6),
     },
     capacity: Number(b.capabilities?.evac_capacity_persons) || 12,
@@ -348,5 +369,45 @@ export const apiClient = {
       }),
     });
     return await res.json();
+  },
+
+  async resolveIncident(
+    incidentId: string,
+    status: 'On_Scene' | 'Resolved' | 'False_Alarm' | 'Duplicate' = 'Resolved'
+  ): Promise<{ ok: boolean }> {
+    try {
+      const res = await fetch(`${API_BASE}/incidents/${incidentId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, updated_by: 'COMMANDER' }),
+      });
+      return await res.json();
+    } catch {
+      return { ok: false };
+    }
+  },
+
+  async fetchAsset(assetId: string): Promise<Asset | null> {
+    try {
+      const res = await fetch(`${API_BASE}/assets/${assetId}`, { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) return null;
+      const json = await res.json();
+      if (!json.ok || !json.data) return null;
+      return transformBackendAsset(json.data as BackendAsset);
+    } catch {
+      return null;
+    }
+  },
+
+  async resetDemo(): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/simulate/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return await res.json();
+    } catch {
+      return { ok: false };
+    }
   },
 };

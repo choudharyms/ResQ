@@ -15,7 +15,21 @@ import { EventType } from '../types/disaster';
 import { playChirp } from '../utils/soundFx';
 
 export const MobileFieldSOSModal: React.FC = () => {
-  const { isFieldFormOpen, setFieldFormOpen, addIncident, isDegradedMode, isMuted } = useDisasterStore();
+  const { isFieldFormOpen, setFieldFormOpen, addIncident, isDegradedMode, isMuted, incidents } = useDisasterStore();
+
+  // Uttarakhand zone dropdown — seeded from live incidents in store
+  const UTTARAKHAND_ZONES = [
+    'Gaurikund Riverside Base',
+    'Rudraprayag Sangam',
+    'Srinagar Garhwal Riverside',
+    'Joshimath Raini Sector',
+    'Helang Bridge Km 18',
+    'Guptkashi Mountain Hamlet',
+    'Karnaprayag Confluence Ghat',
+    'Devprayag Upper Sector',
+    'Badrinath Temple Approach',
+    'Kedarnath Valley Base Camp',
+  ];
 
   const [zoneName, setZoneName] = useState('Gaurikund Riverside Base');
   const [eventType, setEventType] = useState<EventType>('FLOOD');
@@ -23,6 +37,7 @@ export const MobileFieldSOSModal: React.FC = () => {
   const [trapped, setTrapped] = useState(18);
   const [injured, setInjured] = useState(6);
   const [accessNote, setAccessNote] = useState('Water entering market stalls; bridge partially submerged');
+  const [rawSosText, setRawSosText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   
@@ -94,9 +109,9 @@ export const MobileFieldSOSModal: React.FC = () => {
     setTimeout(() => {
       setIsRecording(false);
       playChirp(isMuted);
-      setVoiceTranscript(
-        'Voice SOS Transcribed: "Severe Alaknanda flash flood at Gaurikund. 65 pilgrims stranded near market ghats, 18 trapped by rapid currents, water rising. Urgent boats needed."'
-      );
+      const transcribed = 'Voice SOS Transcribed: "Severe Alaknanda flash flood at Gaurikund. 65 pilgrims stranded near market ghats, 18 trapped by rapid currents, water rising. Urgent boats needed."';
+      setVoiceTranscript(transcribed);
+      setRawSosText('Severe Alaknanda flash flood at Gaurikund. 65 pilgrims stranded near market ghats, 18 trapped by rapid currents, water rising. Urgent boats needed.');
       setZoneName('Gaurikund Ghat');
       setEventType('FLOOD');
       setAffected(65);
@@ -108,6 +123,10 @@ export const MobileFieldSOSModal: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Find location from matching incident or use default Uttarakhand centre
+    const matchingIncident = incidents.find((i) => i.zoneName === zoneName);
+    const location = matchingIncident?.location ?? { lat: 30.5890, lng: 79.0340 };
+
     addIncident({
       zoneName,
       eventType,
@@ -119,10 +138,15 @@ export const MobileFieldSOSModal: React.FC = () => {
         children: Math.floor(affected * 0.2),
         elderly: Math.floor(affected * 0.15),
       },
-      location: { lat: 30.589, lng: 79.034 },
+      location,
       accessNote,
+      // Pass raw SOS text to flow through Gemini parser on the backend
+      rawSosText: rawSosText || undefined,
     });
     setFieldFormOpen(false);
+    // Reset raw SOS field after submission
+    setRawSosText('');
+    setVoiceTranscript('');
   };
 
   return (
@@ -249,13 +273,33 @@ export const MobileFieldSOSModal: React.FC = () => {
             <label className="text-[11px] font-bold text-content-secondary font-mono">
               Sector / Landmark Name *
             </label>
-            <input
-              type="text"
+            <select
               required
               value={zoneName}
               onChange={(e) => setZoneName(e.target.value)}
               className="w-full bg-surface-canvas border border-border-strong rounded-md px-3 py-1.5 text-xs text-content-primary focus:border-border-focus focus:outline-none"
+            >
+              {UTTARAKHAND_ZONES.map((zone) => (
+                <option key={zone} value={zone}>{zone}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Raw SOS Text → Gemini Pipeline */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-bold text-indigo-400 font-mono flex items-center gap-1">
+              <Sparkles className="h-3 w-3" /> Raw SOS Text (AI Triage via Gemini)
+            </label>
+            <textarea
+              rows={2}
+              value={rawSosText}
+              onChange={(e) => setRawSosText(e.target.value)}
+              placeholder="Paste or type the raw distress message — Gemini will extract need, severity and triage tier automatically…"
+              className="w-full bg-surface-canvas border border-indigo-700/40 rounded-md p-2 text-xs text-content-primary focus:border-indigo-500 focus:outline-none placeholder:text-content-muted font-mono"
             />
+            <p className="text-[10px] text-content-muted">
+              If left blank, the form fields below will construct the SOS payload.
+            </p>
           </div>
 
           {/* Event Type & Road Access */}

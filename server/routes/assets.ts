@@ -31,6 +31,41 @@ router.get('/', async (_req: Request, res: Response) => {
   }
 });
 
+// ── GET /api/assets/:id ───────────────────────────────────────────────────────
+// Returns a single asset by ID with full detail
+router.get('/:id', async (req: Request, res: Response) => {
+  const idParsed = UUIDParam.safeParse(req.params.id);
+  if (!idParsed.success) {
+    return res.status(400).json({ ok: false, error: { code: 'INVALID_ID', message: 'ID must be a valid UUID' } });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+          a.id, a.name, a.call_sign, a.category, a.category_detail,
+          a.status, a.capability_tags, a.capabilities, a.fuel_level,
+          ST_X(a.location::GEOMETRY) AS longitude,
+          ST_Y(a.location::GEOMETRY) AS latitude,
+          a.last_telemetry_at, a.updated_at,
+          ag.name AS agency_name, ag.category AS agency_category,
+          ag.incident_commander, ag.radio_channel, ag.phone
+       FROM assets a
+       JOIN agencies ag ON ag.id = a.agency_id
+       WHERE a.id = $1 AND a.is_deleted = FALSE`,
+      [idParsed.data]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ ok: false, error: { code: 'NOT_FOUND', message: 'Asset not found' } });
+    }
+
+    return res.json({ ok: true, data: result.rows[0] });
+  } catch (err) {
+    console.error('[GET /assets/:id]', err);
+    return res.status(500).json({ ok: false, error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch asset' } });
+  }
+});
+
 // ── PATCH /api/assets/:id/status ─────────────────────────────────────────────
 // Status transitions trigger different backend behaviors:
 //   → 'Degraded': calls fn_handle_asset_degradation (auto-reallocation)

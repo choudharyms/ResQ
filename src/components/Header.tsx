@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AlertTriangle,
   Zap,
@@ -12,6 +12,7 @@ import {
   Volume2,
   VolumeX,
   RefreshCw,
+  RotateCcw,
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
 
@@ -35,7 +36,10 @@ export const Header: React.FC = () => {
     isSyncing,
     lastSyncTime,
     hydrateFromBackend,
+    resetDemo,
   } = useDisasterStore();
+
+  const [isResetting, setIsResetting] = useState(false);
 
   const activeCount = incidents.length;
   const criticalCount = incidents.filter((i) => i.assessment.priorityScore >= 80).length;
@@ -43,11 +47,19 @@ export const Header: React.FC = () => {
   const totalFleet = assets.length;
   const deployedPct = Math.round((deployedCount / Math.max(totalFleet, 1)) * 100);
 
-  const ndrfCount = assets.filter((a) => a.agency.includes('NDRF')).length;
-  const sdrfCount = assets.filter((a) => a.agency.includes('SDRF')).length;
-  const policeCount = assets.filter((a) => a.agency.includes('Police')).length;
-  const emsCount = assets.filter((a) => a.agency.includes('Medical') || a.agency.includes('EMS')).length;
-  const itbpCount = assets.filter((a) => a.agency.includes('ITBP') || a.agency.includes('Army')).length;
+  // Bug 2 fix: use strict equality against AgencyType enum values (not substring search)
+  const ndrfCount  = assets.filter((a) => a.agency === 'NDRF').length;
+  const sdrfCount  = assets.filter((a) => a.agency === 'SDRF').length;
+  const policeCount = assets.filter((a) => a.agency === 'POLICE').length;
+  const emsCount   = assets.filter((a) => a.agency === 'EMS').length;
+  const itbpCount  = assets.filter((a) => a.agency === 'ITBP').length;
+
+  const handleResetDemo = async () => {
+    if (!window.confirm('Reset demo? All incidents and plan data will return to the Uttarakhand seed state.')) return;
+    setIsResetting(true);
+    await resetDemo();
+    setIsResetting(false);
+  };
 
   return (
     <header className="bg-surface-panel border-b border-border-subtle px-4 py-2 flex flex-col md:flex-row items-center justify-between gap-3 select-none sticky top-0 z-30 shadow-md">
@@ -281,6 +293,17 @@ export const Header: React.FC = () => {
           ) : (
             <Wifi className="h-3.5 w-3.5 text-status-safe" />
           )}
+        </button>
+
+        {/* Reset Demo Button */}
+        <button
+          onClick={handleResetDemo}
+          disabled={isResetting}
+          className="px-2 py-1.5 rounded-md text-xs font-mono flex items-center gap-1 transition-all border bg-surface-card border-border-subtle text-content-muted hover:text-amber-400 hover:border-amber-600/50 disabled:opacity-50"
+          title="Reset demo to Uttarakhand seed state (clears all plans and allocations)"
+        >
+          <RotateCcw className={`h-3.5 w-3.5 ${isResetting ? 'animate-spin' : ''}`} />
+          <span className="hidden xl:inline">Reset</span>
         </button>
       </div>
     </header>
