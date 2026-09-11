@@ -19,6 +19,8 @@ if (!ACCESS_TOKEN) {
   process.exit(1);
 }
 
+const MIGRATIONS_DIR = path.join(process.cwd(), 'db', 'migrations');
+
 async function executeSql(query: string, name: string) {
   const url = `https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query`;
   const response = await fetch(url, {
