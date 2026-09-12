@@ -25,7 +25,6 @@ app.use(morgan(config.NODE_ENV === 'production' ? 'combined' : 'dev'));
 // ── Serve DOM Console UI at root ───────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Health check ───────────────────────────────────────────────────────────────
 const handleHealth = (_req: express.Request, res: express.Response) => {
   res.json({ ok: true, service: 'ResQ API', env: config.NODE_ENV, ts: new Date().toISOString() });
 };

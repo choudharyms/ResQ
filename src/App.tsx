@@ -72,12 +72,12 @@ export const App: React.FC = () => {
   }, [activePlan, approveCurrentPlan, runAllocation, isEquityDrawerOpen, setEquityDrawerOpen, isDiffModalOpen]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-canvas text-content-primary font-sans antialiased overflow-hidden">
+    <div className="h-screen w-screen flex flex-col bg-surface-canvas text-content-primary font-sans antialiased overflow-hidden">
       {/* Top Bar Header */}
       <Header />
 
       {/* Main 3-Pane Tactical Command Cockpit */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Pane: Incident Priority Queue */}
         <IncidentQueue />
 

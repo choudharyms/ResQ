@@ -3,8 +3,19 @@ import { z } from 'zod';
 import { pool } from '../db.js';
 import { handleAssetDegradation } from '../services/allocationEngine.js';
 import { refreshEquityAsync } from '../services/equityService.js';
+import { isMockMode, mockDb } from '../db.js';
 
 const router = Router();
+
+// ── GET /api/simulate/status ──────────────────────────────────────────────────
+// Reports the current simulation mode (LIVE_DB vs LOCAL_MOCK)
+router.get('/status', (_req: Request, res: Response) => {
+  return res.json({
+    ok: true,
+    mode: isMockMode ? 'LOCAL_MOCK' : 'LIVE_DB',
+    scenario: 'Uttarakhand Flash Flood — Rudraprayag / Joshimath / Helang Bridge',
+  });
+});
 
 // ── POST /api/simulate/degrade ────────────────────────────────────────────────
 // Demo checkpoint 3: force an asset into Degraded state and trigger auto-reallocation
@@ -27,6 +38,12 @@ router.post('/degrade', async (req: Request, res: Response) => {
 // Reset all assets and incidents to the clean seeded state for a fresh demo run
 router.post('/reset', async (_req: Request, res: Response) => {
   try {
+    if (isMockMode) {
+      // Reset in-memory mock database to initial seed state
+      mockDb.resetToSeed();
+      return res.json({ ok: true, message: 'Mock database reset to Uttarakhand seed state.' });
+    }
+
     await pool.query('BEGIN');
 
     // Clear derived/audit data first (FK order)
@@ -41,7 +58,7 @@ router.post('/reset', async (_req: Request, res: Response) => {
     await pool.query('COMMIT');
     refreshEquityAsync();
 
-    return res.json({ ok: true, message: 'Demo environment reset. Re-seeding incidents recommended.' });
+    return res.json({ ok: true, message: 'Demo environment reset to Uttarakhand seed state.' });
   } catch (err) {
     await pool.query('ROLLBACK');
     console.error('[POST /simulate/reset]', err);
@@ -50,27 +67,36 @@ router.post('/reset', async (_req: Request, res: Response) => {
 });
 
 // ── POST /api/simulate/sos-burst ─────────────────────────────────────────────
-// Inject a burst of 3 pre-scripted SOS incidents for the demo
+// Inject a burst of 3 pre-scripted SOS incidents for the Uttarakhand Flash Flood demo
 router.post('/sos-burst', async (_req: Request, res: Response) => {
-  // These are the 5 incidents from the demo script that showcase all triage tiers
+  // Uttarakhand Flash Flood — 5 demo incidents showcasing all triage tiers
   const demoIncidents = [
     {
-      text: 'Water entering second floor near civil hospital. Grandfather has cardiac pain. 3 kids stranded. Help!',
-      lat: 26.9210, lng: 75.7835,
+      text: 'Alaknanda water 4.2m above danger level, 64 pilgrims trapped on Rudraprayag temple terrace, river confluence completely flooded',
+      lat: 30.2854, lng: 78.9812,
     },
     {
-      text: '8 families on rooftop Mansarovar, kids crying, no food since yesterday, water 3 feet',
-      lat: 26.9150, lng: 75.7650,
+      text: 'Dam spillway surge inundating houses at Srinagar Garhwal riverside, 45 residents including 2 infants and 12 elderly trapped',
+      lat: 30.2227, lng: 78.7844,
     },
     {
-      text: 'Building wall collapsed, person trapped under concrete, breathing but cannot move',
-      lat: 26.9040, lng: 75.7960,
+      text: 'Glacial debris landslide at Joshimath Raini sector, structural bridge damage, 32 people trapped under rockfall, 4 critically injured',
+      lat: 30.5564, lng: 79.5668,
+    },
+    {
+      text: 'NH-07 Badrinath Highway washed out at Helang Bridge Km 18, 85 bus pilgrims cut off, multiple fractures and trauma reported',
+      lat: 30.5278, lng: 79.5220,
+    },
+    {
+      text: 'Mandakini tributary overflowing, road to Kedarnath blocked at Guptkashi, 28 people stranded, silent zone, comms intermittent',
+      lat: 30.5229, lng: 79.0768,
     },
   ];
 
   return res.json({
     ok: true,
-    message: 'Use these SOS texts with POST /api/incidents to demo the full intake pipeline.',
+    message: 'Use these SOS texts with POST /api/incidents to demo the Uttarakhand flash flood intake pipeline.',
+    scenario: 'Uttarakhand Flash Flood — Rudraprayag / Joshimath / Guptkashi',
     demo_incidents: demoIncidents,
   });
 });

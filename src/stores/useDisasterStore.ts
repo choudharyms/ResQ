@@ -75,7 +75,10 @@ interface DisasterState {
     casualties: Incident['casualties'];
     location: Incident['location'];
     accessNote: string;
+    rawSosText?: string;
   }) => Promise<void>;
+  resolveIncident: (incidentId: string) => Promise<void>;
+  resetDemo: () => Promise<void>;
   setDiffModalOpen: (open: boolean) => void;
   setEquityDrawerOpen: (open: boolean) => void;
   setFieldFormOpen: (open: boolean) => void;
@@ -89,7 +92,11 @@ interface DisasterState {
   setTourStep: (step: number | null) => void;
 }
 
-export const useDisasterStore = create<DisasterState>((set, get) => ({
+export const useDisasterStore = create<DisasterState>((set, get) => {
+  // Guard to prevent concurrent hydration calls (prevents race conditions)
+  let isHydrating = false;
+
+  return ({
   incidents: INITIAL_INCIDENTS,
   selectedIncidentId: INITIAL_INCIDENTS[0].id,
   assets: INITIAL_ASSETS,
@@ -117,6 +124,9 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
   lastSyncTime: null,
 
   hydrateFromBackend: async () => {
+    // Guard: skip if already hydrating to prevent overlapping fetches
+    if (isHydrating) return;
+    isHydrating = true;
     set({ isSyncing: true });
     try {
       // Check API health
@@ -129,6 +139,7 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
           isSyncing: false,
         });
         get().runAllocation();
+        isHydrating = false;
         return;
       }
 
@@ -152,12 +163,16 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
       const currentAssets = backendAssets && backendAssets.length > 0 ? backendAssets : get().assets;
       const currentEquity = backendEquity && backendEquity.length > 0 ? backendEquity : get().equityZones;
 
+      // Preserve selected incident ID if it still exists in the new data
+      const prevSelected = get().selectedIncidentId;
+      const nextSelected = currentIncidents.find(i => i.id === prevSelected)?.id ?? currentIncidents[0]?.id ?? null;
+
       // Check Dexie for pending offline records
       const pendingCount = await countUnsyncedSosReports().catch(() => 0);
 
       set({
         incidents: currentIncidents,
-        selectedIncidentId: currentIncidents[0]?.id || null,
+        selectedIncidentId: nextSelected,
         assets: currentAssets,
         equityZones: currentEquity,
         isApiConnected: true,
@@ -177,6 +192,8 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
         isSyncing: false,
       });
       get().runAllocation();
+    } finally {
+      isHydrating = false;
     }
   },
 
@@ -351,14 +368,21 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
 
     playDispatchChime(isMuted);
 
-    const newId = `inc-${Date.now()}`;
+    // Bug 6 fix: use crypto.randomUUID() so batch sync UUID validation passes
+    const newId = crypto.randomUUID();
     const code = `INC-${Math.floor(2000 + Math.random() * 8000)}`;
     const demandVector = computeDemandVector(data.casualties, data.eventType);
+
+    // Build raw SOS text: prefer explicit rawSosText, otherwise construct from form fields
+    const rawSosText = data.rawSosText ||
+      `${data.zoneName}: ${data.eventType} emergency — ${data.accessNote}. ` +
+      `Affected: ${data.casualties.affected}, Trapped: ${data.casualties.trapped}, ` +
+      `Injured: ${data.casualties.injured}, Children: ${data.casualties.children}, Elderly: ${data.casualties.elderly}.`;
 
     const draftIncident: Incident = {
       id: newId,
       incidentCode: code,
-      zoneId: `zone-${Date.now()}`,
+      zoneId: `zone-${newId.slice(-8)}`,
       zoneName: data.zoneName,
       location: data.location,
       h3Index: '88609a6544fffff',
@@ -397,8 +421,8 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
     // Offline / Degraded or Network Disconnect Handling
     if (isDegradedMode || !isApiConnected) {
       await queueOfflineSos({
-        id: draftIncident.id,
-        raw_sos_text: `${data.zoneName}: ${data.eventType} - ${data.accessNote}`,
+        id: newId,
+        raw_sos_text: rawSosText,
         primary_need: data.eventType === 'FLOOD' ? 'Water_Evacuation' : data.eventType === 'LANDSLIDE' ? 'Road_Clearance' : 'Medical_Emergency',
         latitude: data.location.lat,
         longitude: data.location.lng,
@@ -413,19 +437,24 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
       return;
     }
 
-    // Online dispatch to Express backend
+    // Online dispatch — POST raw SOS text to Gemini intake pipeline on the backend
     try {
-      await apiClient.createIncident({
-        raw_sos_text: `${data.zoneName}: ${data.eventType} - ${data.accessNote} (Affected: ${data.casualties.affected})`,
+      const result = await apiClient.createIncident({
+        raw_sos_text: rawSosText,
         latitude: data.location.lat,
         longitude: data.location.lng,
         origin_channel: 'FIELD_APP',
       });
+      // If backend returned a parsed incident, refresh from live data
+      if (result.ok && !result.duplicate) {
+        // Async background refresh — do not block optimistic UI
+        setTimeout(() => get().hydrateFromBackend(), 500);
+      }
     } catch (err) {
       console.warn('[ResQ] Failed to push incident to API, buffering in Dexie:', err);
       await queueOfflineSos({
-        id: draftIncident.id,
-        raw_sos_text: `${data.zoneName}: ${data.eventType} - ${data.accessNote}`,
+        id: newId,
+        raw_sos_text: rawSosText,
         primary_need: 'Emergency_Triage',
         latitude: data.location.lat,
         longitude: data.location.lng,
@@ -458,7 +487,7 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
               client_device_id: 'COMMANDER_COCKPIT_WEB_01',
               synced_at: new Date().toISOString(),
               queued_incidents: unsynced.map((u) => ({
-                id: u.id.startsWith('inc-') ? `c0000001-0000-0000-0000-${String(Math.floor(100000000000 + Math.random() * 899999999999))}` : u.id,
+                id: u.id,  // IDs are now always UUIDs from crypto.randomUUID()
                 raw_sos_text: u.raw_sos_text,
                 primary_need: u.primary_need,
                 latitude: u.latitude,
@@ -540,6 +569,51 @@ export const useDisasterStore = create<DisasterState>((set, get) => ({
     }));
   },
 
+  resolveIncident: async (incidentId: string) => {
+    const { isApiConnected } = get();
+
+    // Optimistic UI: mark as RESOLVED immediately
+    set((state) => ({
+      incidents: state.incidents.map((i) =>
+        i.id === incidentId ? { ...i, status: 'RESOLVED' as const } : i
+      ),
+      selectedIncidentId: state.selectedIncidentId === incidentId ? null : state.selectedIncidentId,
+    }));
+
+    get().runAllocation();
+
+    if (isApiConnected) {
+      apiClient.resolveIncident(incidentId, 'Resolved').catch((e) =>
+        console.warn('[ResQ] Failed to resolve incident on backend:', e)
+      );
+    }
+  },
+
+  resetDemo: async () => {
+    const { isApiConnected } = get();
+    try {
+      if (isApiConnected) {
+        await apiClient.resetDemo();
+      }
+      // Always reset frontend store to initial Uttarakhand seed state
+      set({
+        incidents: INITIAL_INCIDENTS,
+        selectedIncidentId: INITIAL_INCIDENTS[0].id,
+        assets: INITIAL_ASSETS,
+        equityZones: INITIAL_EQUITY_ZONES,
+        activePlan: null,
+        activePlanDiff: null,
+        isHighwayCut: false,
+        isDiffModalOpen: false,
+        offlineQueueCount: 0,
+      });
+      // Re-run allocation on seed state
+      get().runAllocation();
+    } catch (err) {
+      console.error('[ResQ] Demo reset failed:', err);
+    }
+  },
+
   toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
   setTourStep: (step) => set({ tourStep: step }),
-}));
+})});

@@ -20,6 +20,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
+import { getAgencyConfig, AGENCY_CONFIG } from '../utils/agencyConfig';
 
 export const FleetDrawer: React.FC = () => {
   const {
@@ -42,11 +43,11 @@ export const FleetDrawer: React.FC = () => {
 
   const agencyFilterOptions = [
     { id: 'ALL', label: 'All Fleet', icon: null },
-    { id: 'NDRF', label: 'NDRF', icon: '/assets/agencies/ndrf-icon.png' },
-    { id: 'SDRF', label: 'SDRF', icon: '/assets/agencies/sdrf-icon.png' },
-    { id: 'POLICE', label: 'Police', icon: '/assets/agencies/police-icon.png' },
-    { id: 'EMS', label: 'EMS', icon: '/assets/agencies/ems-icon.png' },
-    { id: 'ITBP', label: 'ITBP/Army', icon: '/assets/agencies/ngo-icon.png' },
+    { id: 'NDRF', label: 'NDRF', icon: AGENCY_CONFIG.NDRF.icon },
+    { id: 'SDRF', label: 'SDRF', icon: AGENCY_CONFIG.SDRF.icon },
+    { id: 'POLICE', label: 'Police', icon: AGENCY_CONFIG.POLICE.icon },
+    { id: 'EMS', label: 'EMS', icon: AGENCY_CONFIG.EMS.icon },
+    { id: 'ITBP', label: 'ITBP', icon: AGENCY_CONFIG.ITBP.icon },
   ];
 
   const filteredAssets =
@@ -155,13 +156,7 @@ export const FleetDrawer: React.FC = () => {
             {/* Fleet Asset Cards */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {filteredAssets.map((asset) => {
-                let agencyIcon = '/assets/agencies/ndrf-icon.png';
-                if (asset.agency.includes('SDRF')) agencyIcon = '/assets/agencies/sdrf-icon.png';
-                else if (asset.agency.includes('Police')) agencyIcon = '/assets/agencies/police-icon.png';
-                else if (asset.agency.includes('Medical') || asset.agency.includes('EMS'))
-                  agencyIcon = '/assets/agencies/ems-icon.png';
-                else if (asset.agency.includes('ITBP') || asset.agency.includes('Army'))
-                  agencyIcon = '/assets/agencies/ngo-icon.png';
+                const agencyCfg = getAgencyConfig(asset.agency);
 
                 return (
                   <div
@@ -171,7 +166,7 @@ export const FleetDrawer: React.FC = () => {
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
                         <img
-                          src={agencyIcon}
+                          src={agencyCfg.icon}
                           alt={asset.agency}
                           className="h-7 w-7 rounded-md object-contain border border-border-strong bg-black/40"
                         />

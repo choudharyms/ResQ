@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
 import { Incident } from '../types/disaster';
+import { getAgencyConfig } from '../utils/agencyConfig';
 
 export const IncidentQueue: React.FC = () => {
   const {
@@ -28,8 +29,8 @@ export const IncidentQueue: React.FC = () => {
     fragmentaryFeed,
     activeIncidentView,
     setActiveIncidentView,
+    lastSyncTime,
   } = useDisasterStore();
-
   const [filter, setFilter] = useState<'ALL' | 'CRITICAL' | 'FLOOD' | 'LANDSLIDE'>('ALL');
   const [channelFilter, setChannelFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,7 +59,7 @@ export const IncidentQueue: React.FC = () => {
   const getEventIcon = (eventType: Incident['eventType']) => {
     switch (eventType) {
       case 'FLOOD':
-        return <Waves className="h-3.5 w-3.5 text-blue-400" />;
+        return <Waves className="h-3.5 w-3.5 text-sky-400" />;
       case 'LANDSLIDE':
         return <Mountain className="h-3.5 w-3.5 text-amber-400" />;
       case 'COLLAPSE':
@@ -192,122 +193,112 @@ export const IncidentQueue: React.FC = () => {
             {filteredIncidents.map((incident) => {
               const isSelected = selectedIncidentId === incident.id;
               const isCritical = incident.assessment.priorityScore >= 80;
+              const reqAgency = incident.eventType === 'FLOOD' ? 'NDRF' : incident.eventType === 'LANDSLIDE' || incident.eventType === 'COLLAPSE' ? 'SDRF' : 'EMS';
+              const agencyCfg = getAgencyConfig(reqAgency);
 
-              return (
-                <div
-                  key={incident.id}
-                  onClick={() => selectIncident(incident.id)}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    isSelected
-                      ? 'bg-surface-card border-indigo-500 shadow-md ring-1 ring-indigo-500/40'
-                      : 'bg-surface-panel hover:bg-surface-card border-border-subtle hover:border-border-strong'
-                  }`}
-                >
-                  {/* Header: Code, Priority, and Status Pill */}
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-mono text-xs font-bold text-content-primary">
-                        {incident.incidentCode}
-                      </span>
-                      <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.2 rounded bg-surface-canvas text-content-muted border border-border-subtle font-mono">
-                        {getEventIcon(incident.eventType)}
-                        {incident.eventType}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`font-mono text-xs font-extrabold px-1.5 py-0.5 rounded ${
-                          isCritical
-                            ? 'bg-status-critical/20 text-status-critical border border-status-critical/40'
-                            : 'bg-status-high/20 text-status-high border border-status-high/40'
-                        }`}
-                      >
-                        {incident.assessment.priorityScore}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Title & Location */}
-                  <h4 className="text-xs font-bold text-content-primary mb-1 line-clamp-1">
-                    {incident.zoneName}
-                  </h4>
-
-                  {/* Primary Agency Requirement Badge */}
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    {incident.eventType === 'FLOOD' ? (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-950/40 border border-orange-700/50 text-orange-300 font-mono flex items-center gap-1">
-                        <img src="/assets/agencies/ndrf-icon.png" alt="NDRF" className="h-3 w-3 rounded-sm object-contain" />
-                        Req: NDRF Water Rescue
-                      </span>
-                    ) : incident.eventType === 'LANDSLIDE' || incident.eventType === 'COLLAPSE' ? (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-950/40 border border-blue-700/50 text-blue-300 font-mono flex items-center gap-1">
-                        <img src="/assets/agencies/sdrf-icon.png" alt="SDRF" className="h-3 w-3 rounded-sm object-contain" />
-                        Req: SDRF Mountain Squad
-                      </span>
-                    ) : (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-950/40 border border-red-700/50 text-red-300 font-mono flex items-center gap-1">
-                        <img src="/assets/agencies/ems-icon.png" alt="EMS" className="h-3 w-3 rounded-sm object-contain" />
-                        Req: EMS Advanced Trauma
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Casualties summary */}
-                  <div className="flex items-center gap-3 text-[11px] text-content-secondary font-mono mb-2">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3 text-content-muted" />
-                      {incident.casualties.affected} affected
+            return (
+              <div
+                key={incident.id}
+                onClick={() => selectIncident(incident.id)}
+                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                  isSelected
+                    ? 'bg-surface-card border-sky-500 shadow-md ring-1 ring-sky-500/40'
+                    : 'bg-surface-panel hover:bg-surface-card border-border-subtle hover:border-border-strong'
+                }`}
+              >
+                {/* Header: Code, Priority, and Status Pill */}
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs font-bold text-content-primary">
+                      {incident.incidentCode}
                     </span>
-                    {incident.casualties.trapped > 0 && (
-                      <span className="text-status-critical font-bold">
-                        {incident.casualties.trapped} trapped
-                      </span>
-                    )}
-                    {incident.casualties.injured > 0 && (
-                      <span className="text-status-high">
-                        {incident.casualties.injured} injured
-                      </span>
-                    )}
+                    <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.2 rounded bg-surface-canvas text-content-muted border border-border-subtle font-mono">
+                      {getEventIcon(incident.eventType)}
+                      {incident.eventType}
+                    </span>
                   </div>
 
-                  {/* Road Access Pill & H3 Index */}
-                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border-subtle text-[10px] font-mono">
+                  <div className="flex items-center gap-1.5">
                     <span
-                      className={`px-1.5 py-0.5 rounded uppercase font-semibold ${
-                        incident.roadStatus === 'OPEN'
-                          ? 'bg-status-safe/15 text-status-safe'
-                          : incident.roadStatus === 'PARTIAL'
-                          ? 'bg-status-high/15 text-status-high'
-                          : 'bg-status-critical/15 text-status-critical'
+                      className={`font-mono text-xs font-extrabold px-1.5 py-0.5 rounded ${
+                        isCritical
+                          ? 'bg-status-critical/20 text-status-critical border border-status-critical/40'
+                          : 'bg-status-high/20 text-status-high border border-status-high/40'
                       }`}
                     >
-                      Road: {incident.roadStatus}
-                    </span>
-
-                    <span className="text-content-muted flex items-center gap-1" title="Uber H3 Hex Resolution 8">
-                      H3: {incident.h3Index.substring(0, 7)}...
-                      <ChevronRight className="h-3 w-3 text-content-muted" />
+                      {incident.assessment.priorityScore}
                     </span>
                   </div>
-
-                  {/* Silent / Forgotten Zone Special Warning */}
-                  {incident.isSilentPocket && (
-                    <div className="mt-2 px-2 py-1 rounded bg-status-forgotten/15 border border-status-forgotten/40 flex items-center gap-1.5 text-[10px] text-purple-300 font-mono">
-                      <HelpCircle className="h-3 w-3 text-status-forgotten" />
-                      <span>SILENT ZONE (Low Conf 42% / High Need)</span>
-                    </div>
-                  )}
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Title & Location */}
+                <h4 className="text-xs font-bold text-content-primary mb-1 line-clamp-1">
+                  {incident.zoneName}
+                </h4>
+
+                {/* Primary Agency Requirement Badge */}
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded ${agencyCfg.chipClass} font-mono flex items-center gap-1 border`}>
+                    <img src={agencyCfg.icon} alt={agencyCfg.shortName} className="h-3 w-3 rounded-sm object-contain" />
+                    <span>Req: {agencyCfg.shortName} {incident.eventType === 'FLOOD' ? 'Water Rescue' : incident.eventType === 'MEDICAL_SURGE' ? 'Trauma Team' : 'Alpine Squad'}</span>
+                  </span>
+                </div>
+
+              {/* Casualties summary */}
+              <div className="flex items-center gap-3 text-[11px] text-content-secondary font-mono mb-2">
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3 text-content-muted" />
+                  {incident.casualties.affected} affected
+                </span>
+                {incident.casualties.trapped > 0 && (
+                  <span className="text-status-critical font-bold">
+                    {incident.casualties.trapped} trapped
+                  </span>
+                )}
+                {incident.casualties.injured > 0 && (
+                  <span className="text-status-high">
+                    {incident.casualties.injured} injured
+                  </span>
+                )}
+              </div>
+
+                {/* Road Access Pill & H3 Index */}
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border-subtle text-[10px] font-mono">
+                  <span
+                    className={`px-1.5 py-0.5 rounded uppercase font-semibold ${
+                      incident.roadStatus === 'OPEN'
+                        ? 'bg-status-safe/15 text-status-safe'
+                        : incident.roadStatus === 'PARTIAL'
+                        ? 'bg-status-high/15 text-status-high'
+                        : 'bg-status-critical/15 text-status-critical'
+                    }`}
+                  >
+                    Road: {incident.roadStatus}
+                  </span>
+
+                  <span className="text-content-muted flex items-center gap-1" title="Uber H3 Hex Resolution 8">
+                    H3: {incident.h3Index.substring(0, 7)}...
+                    <ChevronRight className="h-3 w-3 text-content-muted" />
+                  </span>
+                </div>
+
+                {/* Silent / Forgotten Zone Special Warning */}
+                {incident.isSilentPocket && (
+                  <div className="mt-2 px-2 py-1 rounded bg-status-forgotten/15 border border-status-forgotten/40 flex items-center gap-1.5 text-[10px] text-purple-300 font-mono">
+                    <HelpCircle className="h-3 w-3 text-status-forgotten" />
+                    <span>SILENT ZONE (Low Conf 42% / High Need)</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
           {/* Queue Footer */}
           <div className="p-2 border-t border-border-subtle bg-surface-canvas text-center text-[11px] text-content-muted font-mono flex items-center justify-between px-3">
             <span>{filteredIncidents.length} active sectors</span>
             <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" /> Updated T+04:15
+              <Clock className="h-3 w-3" /> {lastSyncTime ? `Synced ${lastSyncTime}` : 'Updated T+04:15'}
             </span>
           </div>
         </>

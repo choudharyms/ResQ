@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useDisasterStore } from '../stores/useDisasterStore';
+import { getAgencyConfig } from '../utils/agencyConfig';
 
 export const AllocationPlanPanel: React.FC = () => {
   const {
@@ -253,11 +254,8 @@ export const AllocationPlanPanel: React.FC = () => {
                     const isExpanded = expandedReasoningId === asg.id;
                     const isSelected = selectedIncidentId === asg.incidentId;
 
-                    let agencyIconSrc = '/assets/agencies/ndrf-icon.png';
-                    if (asg.agency.includes('SDRF')) agencyIconSrc = '/assets/agencies/sdrf-icon.png';
-                    else if (asg.agency.includes('Police')) agencyIconSrc = '/assets/agencies/police-icon.png';
-                    else if (asg.agency.includes('Medical') || asg.agency.includes('EMS')) agencyIconSrc = '/assets/agencies/ems-icon.png';
-                    else if (asg.agency.includes('ITBP') || asg.agency.includes('Army')) agencyIconSrc = '/assets/agencies/ngo-icon.png';
+                    const agencyCfg = getAgencyConfig(asg.agency);
+                    const agencyIconSrc = agencyCfg.icon;
 
                     return (
                       <div
@@ -281,7 +279,7 @@ export const AllocationPlanPanel: React.FC = () => {
                                 <span className="text-xs font-mono font-bold text-content-primary">
                                   {asg.assetCode}
                                 </span>
-                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-surface-panel text-content-muted font-mono border border-border-subtle">
+                                <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono border ${agencyCfg.chipClass}`}>
                                   {asg.agency}
                                 </span>
                               </div>

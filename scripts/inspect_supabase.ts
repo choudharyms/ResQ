@@ -18,12 +18,12 @@ async function query(sql: string) {
 }
 
 async function main() {
-  console.log('--- ResQ Supabase Security & RLS Inspection ---');
+  console.log('--- ResQ Supabase Security & Advisory Inspection ---');
 
   const relations = await query(`
-    SELECT 
+    SELECT
       c.relname as name,
-      CASE c.relkind 
+      CASE c.relkind
         WHEN 'r' THEN 'table'
         WHEN 'v' THEN 'view'
         WHEN 'm' THEN 'materialized_view'
@@ -40,8 +40,26 @@ async function main() {
   console.log('\nPublic Schema Relations:');
   console.table(relations);
 
+  const policies = await query(`
+    SELECT tablename, policyname, roles, cmd, with_check 
+    FROM pg_policies 
+    WHERE schemaname = 'public'
+    ORDER BY tablename, policyname;
+  `);
+  console.log('\nActive RLS Policies:');
+  console.table(policies);
+
+  const procs = await query(`
+    SELECT proname, proconfig 
+    FROM pg_proc 
+    WHERE proname IN ('fn_allocate_asset', 'fn_handle_asset_degradation', 'fn_update_allocation_status', 'fn_refresh_equity')
+      AND pronamespace = 'public'::regnamespace;
+  `);
+  console.log('\nFunction Configuration (search_path):');
+  console.table(procs);
+
   const postgisExt = await query(`
-    SELECT extname, extowner::regrole, n.nspname as schema 
+    SELECT extname, extowner::regrole, n.nspname as schema
     FROM pg_extension e
     JOIN pg_namespace n ON n.oid = e.extnamespace
     WHERE extname = 'postgis';
@@ -50,7 +68,7 @@ async function main() {
   console.table(postgisExt);
 
   const geoTest = await query(`
-    SELECT 
+    SELECT
       a.call_sign,
       i.primary_need,
       ROUND(ST_Distance(a.location::geography, i.location::geography)::numeric, 2) as distance_meters

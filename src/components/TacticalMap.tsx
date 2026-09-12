@@ -15,6 +15,7 @@ import {
   Flame,
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
+import { getAgencyConfig } from '../utils/agencyConfig';
 
 type BasemapType = 'dark' | 'satellite' | 'street';
 
@@ -714,22 +715,9 @@ export const TacticalMap: React.FC = () => {
 
     assets.forEach((asset) => {
       const isDispatched = asset.status === 'EN_ROUTE' || asset.status === 'ON_SITE';
-      let agencyIconSrc = '/assets/agencies/ndrf-icon.png';
-      let agencyColor = '#F97316';
-
-      if (asset.agency.includes('SDRF')) {
-        agencyIconSrc = '/assets/agencies/sdrf-icon.png';
-        agencyColor = '#0284C7';
-      } else if (asset.agency.includes('Police')) {
-        agencyIconSrc = '/assets/agencies/police-icon.png';
-        agencyColor = '#3B82F6';
-      } else if (asset.agency.includes('Medical') || asset.agency.includes('EMS') || asset.agency.includes('Health')) {
-        agencyIconSrc = '/assets/agencies/ems-icon.png';
-        agencyColor = '#EF4444';
-      } else if (asset.agency.includes('ITBP') || asset.agency.includes('Army')) {
-        agencyIconSrc = '/assets/agencies/ngo-icon.png';
-        agencyColor = '#10B981';
-      }
+      const agencyCfg = getAgencyConfig(asset.agency);
+      const agencyIconSrc = agencyCfg.icon;
+      const agencyColor = agencyCfg.hex;
 
       // Compact Circular Vehicle Token with Agency Logo & Live Status Dot
       const assetHtml = `
@@ -768,7 +756,7 @@ export const TacticalMap: React.FC = () => {
               <img src="${agencyIconSrc}" class="h-4 w-4 rounded-sm object-contain" />
               <span class="font-mono text-xs font-bold text-white">${asset.assetCode}</span>
             </div>
-            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-950/60 text-sky-300 border border-sky-800/50 font-mono">${asset.agency}</span>
+            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${agencyCfg.chipClass} font-mono">${agencyCfg.shortName}</span>
           </div>
           <p class="text-xs font-bold text-gray-100">${asset.name}</p>
           <div class="text-[11px] text-gray-300 font-mono space-y-0.5">

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Zap,
   Scale,
@@ -10,6 +10,7 @@ import {
   Volume2,
   VolumeX,
   RefreshCw,
+  RotateCcw,
 } from 'lucide-react';
 import { useDisasterStore } from '../stores/useDisasterStore';
 
@@ -17,6 +18,7 @@ export const Header: React.FC = () => {
   const {
     incidents,
     assets,
+    activePlan,
     isHighwayCut,
     toggleHighwayCut,
     setEquityDrawerOpen,
@@ -33,7 +35,10 @@ export const Header: React.FC = () => {
     isSyncing,
     lastSyncTime,
     hydrateFromBackend,
+    resetDemo,
   } = useDisasterStore();
+
+  const [isResetting, setIsResetting] = useState(false);
 
   const activeCount = incidents.length;
   const criticalCount = incidents.filter((i) => i.assessment.priorityScore >= 80).length;
@@ -41,6 +46,19 @@ export const Header: React.FC = () => {
   const totalFleet = assets.length;
   const deployedPct = Math.round((deployedCount / Math.max(totalFleet, 1)) * 100);
 
+  // Dynamic Unmet Need computation from active plan
+  const totalCasualties = incidents.reduce((sum, inc) => sum + inc.casualties.affected, 0);
+  const securedLives = activePlan?.projectedLivesSecured || 0;
+  const unmetNeedPct = totalCasualties > 0
+    ? Math.max(0, Math.min(100, Math.round(((totalCasualties - securedLives) / totalCasualties) * 100)))
+    : 0;
+
+  const handleResetDemo = async () => {
+    if (!window.confirm('Reset demo? All incidents and plan data will return to the Uttarakhand seed state.')) return;
+    setIsResetting(true);
+    await resetDemo();
+    setIsResetting(false);
+  };
   return (
     <header className="h-14 bg-surface-panel border-b border-border-subtle px-3.5 flex items-center justify-between select-none sticky top-0 z-30 shadow-sm shrink-0">
       {/* LEFT ZONE: Branding, Valley Context & Fleet Capsule */}
@@ -112,7 +130,7 @@ export const Header: React.FC = () => {
         {/* Fairness / Unmet Need Ratio */}
         <div className="flex items-center gap-1.5 pl-3">
           <Scale className="h-3 w-3 text-status-forgotten shrink-0" />
-          <span className="text-content-primary font-bold">31%</span>
+          <span className="text-content-primary font-bold">{unmetNeedPct}%</span>
           <span className="text-content-muted text-[11px]">Unmet</span>
         </div>
       </div>
@@ -231,6 +249,20 @@ export const Header: React.FC = () => {
             ) : (
               <Wifi className="h-3 w-3 text-content-muted" />
             )}
+          </button>
+
+          {/* Micro-divider */}
+          <div className="h-3.5 w-px bg-border-subtle" />
+
+          {/* Reset Demo Button */}
+          <button
+            onClick={handleResetDemo}
+            disabled={isResetting}
+            className="h-full px-2 flex items-center gap-1 hover:bg-surface-hover text-content-muted hover:text-amber-400 transition-all disabled:opacity-50"
+            title="Reset demo to Uttarakhand seed state (clears all plans and allocations)"
+          >
+            <RotateCcw className={`h-3 w-3 ${isResetting ? 'animate-spin' : ''}`} />
+            <span className="hidden xl:inline text-[11px] font-medium">Reset</span>
           </button>
         </div>
       </div>

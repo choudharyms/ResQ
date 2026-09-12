@@ -34,7 +34,7 @@ export const EquityDrawer: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm select-none">
-      <div className="w-full max-w-lg bg-surface-panel border-l border-border-strong h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div className="w-full max-w-md bg-surface-panel border-l border-border-strong h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {/* Drawer Header */}
         <div className="p-4 border-b border-border-subtle flex items-center justify-between gap-3 bg-surface-panel/90 backdrop-blur sticky top-0 z-10">
           <div className="flex items-center gap-2">

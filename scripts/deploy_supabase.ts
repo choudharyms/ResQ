@@ -58,10 +58,10 @@ async function main() {
 
   const hasCoreTables = Array.isArray(tableCheck) && tableCheck.length > 0;
 
-  const appliedRows: { name: string }[] = await executeSql(
+  const appliedRows = ((await executeSql(
     'SELECT name FROM _resq_migrations;',
     'get_applied'
-  );
+  )) as { name: string }[]) || [];
   const appliedSet = new Set(appliedRows.map(r => r.name));
 
   // If core tables exist but not recorded in tracking table, seed tracking table for 001-006
